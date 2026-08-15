@@ -1,0 +1,421 @@
+/* ==========================================================================
+   SZTR FILIPOVIĆ — style.css  (FINAL)
+   Tailwind (CDN) handles layout/spacing in the markup.
+   This file owns tokens, the wire-grid signature, component states, motion.
+
+   REVISION NOTES (UI/UX Creative Director + QA):
+   - Softened every hard edge: cards, fields and mode buttons now carry
+     6–8px radii. The design stays industrial, but stops feeling like a
+     technical drawing aimed at engineers.
+   - Raised text contrast across the board. --concrete went from #6E7873
+     (approx. 4.0:1 on the void background — below AA for body text) to
+     #A3ADA8 (approx. 8.4:1). Body copy over the 3D scene now uses --zinc.
+   - Base font size raised to 17px so an older visitor can read the site
+     without reaching for glasses.
+   ========================================================================== */
+
+:root {
+  /* Palette taken from the actual materials */
+  --void:     #0B0D0C;  /* near-black, green cast */
+  --zinc:     #C3CBC7;  /* galvanized steel */
+  --ral6005:  #114232;  /* coated panel green */
+  --spark:    #FF6A1F;  /* accent */
+  --concrete: #A3ADA8;  /* secondary text — lightened for legibility */
+  --danger:   #FF7A5C;  /* error text, kept readable on dark */
+
+  /* Warmth: a low-saturation amber wash used behind cards, so the dark
+     background reads as workshop light rather than cold void. */
+  --warm-wash: rgba(255, 106, 31, 0.045);
+
+  --mesh: 88px;                 /* wire-grid pitch */
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --------------------------------------------------------------------------
+   RESET / BASE
+   -------------------------------------------------------------------------- */
+* { box-sizing: border-box; }
+
+html {
+  /* Native smooth scroll stays OFF: ScrollTrigger needs the true scroll
+     position, and smooth-scroll + scrub fight one another. */
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+  font-size: 17px;              /* readability floor for older visitors */
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--void);
+  /* Prevents the iOS rubber-band from exposing white behind the canvas */
+  overscroll-behavior-y: none;
+}
+
+.font-900 { font-weight: 900; }
+
+::selection { background: var(--spark); color: var(--void); }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: #232927; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--concrete); }
+
+/* Quality floor: visible keyboard focus on every interactive element */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--spark);
+  outline-offset: 3px;
+  border-radius: var(--radius-control);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   WEBGL CANVAS
+   pointer-events:none keeps scrolling, selection and form input completely
+   unaffected by the 3D layer.
+   -------------------------------------------------------------------------- */
+#webgl {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   SIGNATURE — the wire grid
+   -------------------------------------------------------------------------- */
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(to right,  rgba(195,203,199,0.05) 0 1px, transparent 1px var(--mesh)),
+    repeating-linear-gradient(to bottom, rgba(195,203,199,0.05) 0 1px, transparent 1px var(--mesh));
+  -webkit-mask-image: radial-gradient(ellipse 110% 85% at 50% 45%, #000 35%, transparent 100%);
+          mask-image: radial-gradient(ellipse 110% 85% at 50% 45%, #000 35%, transparent 100%);
+}
+
+#scroll-content { position: relative; z-index: 3; }
+header, #rail { z-index: 50; }
+
+/* --------------------------------------------------------------------------
+   SECTIONS
+   Tall scroll tracks with sticky children. No ScrollTrigger pinning —
+   pinning forces layout recalculation every tick and is the single most
+   expensive thing you can do on integrated graphics.
+   -------------------------------------------------------------------------- */
+.screen { position: relative; }
+
+/* --------------------------------------------------------------------------
+   READABILITY SCRIM
+   Text sitting over a moving 3D scene needs a floor of contrast that a
+   text-shadow alone cannot provide. This is a soft radial wash — it lifts
+   legibility without drawing a hard box around the copy.
+   -------------------------------------------------------------------------- */
+.readable { position: relative; }
+.readable > * { position: relative; z-index: 1; }
+.readable::before {
+  content: '';
+  position: absolute;
+  inset: -2.5rem -3rem;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 35% 50%,
+    rgba(11, 13, 12, 0.94) 0%,
+    rgba(11, 13, 12, 0.80) 45%,
+    rgba(11, 13, 12, 0) 78%
+  );
+}
+/* Hero copy is centred, so its wash must be too */
+#hero-copy::before { background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(11, 13, 12, 0.94) 0%,
+    rgba(11, 13, 12, 0.78) 48%,
+    rgba(11, 13, 12, 0) 80%
+  ); }
+
+/* Belt and braces on top of the scrim */
+.readable h1, .readable h2, .readable p {
+  text-shadow: 0 2px 24px rgba(11, 13, 12, 0.9);
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: hint 2.4s var(--ease-out-quint) infinite;
+}
+@keyframes hint {
+  0%, 100% { opacity: 0.4; transform: translate(-50%, 0); }
+  50%      { opacity: 1;   transform: translate(-50%, 7px); }
+}
+
+/* --------------------------------------------------------------------------
+   SECTION RAIL
+   -------------------------------------------------------------------------- */
+.rail-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--concrete);
+  text-decoration: none;
+  transition: color 0.3s var(--ease-out-quint);
+}
+.rail-link::after {
+  content: '';
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: width 0.4s var(--ease-out-quint);
+}
+.rail-link:hover { color: var(--zinc); }
+.rail-link.is-active { color: var(--spark); }
+.rail-link.is-active::after { width: 40px; }
+
+/* --------------------------------------------------------------------------
+   BUTTONS
+   -------------------------------------------------------------------------- */
+.btn-primary,
+.btn-ghost {
+  display: inline-block;
+  padding: 0.8rem 1.5rem;
+  border-radius: var(--radius-control);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.3s var(--ease-out-quint),
+              color 0.3s var(--ease-out-quint),
+              border-color 0.3s var(--ease-out-quint),
+              transform 0.2s var(--ease-out-quint);
+}
+.btn-primary {
+  background: var(--spark);
+  color: #16100B;                            /* dark on orange = 8:1 contrast */
+  box-shadow: 0 6px 22px rgba(255, 106, 31, 0.22);
+}
+.btn-primary:hover { background: #FF8547; transform: translateY(-2px); }
+.btn-primary:active { transform: translateY(0); }
+
+/* Large variant for the primary conversion action */
+.btn-lg { padding: 1.05rem 1.5rem; font-size: 13px; letter-spacing: 0.16em; }
+
+.btn-ghost {
+  background: rgba(195, 203, 199, 0.04);
+  color: var(--zinc);
+  border-color: rgba(195, 203, 199, 0.3);
+}
+.btn-ghost:hover { border-color: var(--spark); color: var(--spark); }
+
+/* --------------------------------------------------------------------------
+   MODE SWITCHER (Screen 3)
+   -------------------------------------------------------------------------- */
+.mode-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem 1.4rem;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-card);
+  background: linear-gradient(rgba(11, 13, 12, 0.72), rgba(11, 13, 12, 0.72)), var(--warm-wash);
+  border: 1px solid rgba(195, 203, 199, 0.2);
+  backdrop-filter: blur(6px);
+  transition: border-color 0.35s var(--ease-out-quint),
+              background-color 0.35s var(--ease-out-quint),
+              transform 0.35s var(--ease-out-quint);
+}
+.mode-btn:hover { transform: translateY(-3px); border-color: rgba(195, 203, 199, 0.5); }
+
+.mode-label {
+  font-family: 'Saira Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--zinc);
+}
+.mode-spec {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  color: var(--concrete);
+}
+
+.mode-btn.is-active {
+  background: linear-gradient(rgba(17, 66, 50, 0.72), rgba(17, 66, 50, 0.72));
+  border-color: var(--spark);
+}
+.mode-btn.is-active .mode-label { color: #fff; }
+.mode-btn.is-active .mode-spec  { color: var(--spark); }
+/* Accent tick on the left edge — reads like a marked-up drawing */
+.mode-btn.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--spark);
+}
+
+/* --------------------------------------------------------------------------
+   CARDS + FORM (Screen 4)
+   -------------------------------------------------------------------------- */
+.panel-card {
+  padding: 2rem;
+  border-radius: var(--radius-card);
+  background: linear-gradient(rgba(11, 13, 12, 0.8), rgba(11, 13, 12, 0.8)), var(--warm-wash);
+  border: 1px solid rgba(195, 203, 199, 0.16);
+  backdrop-filter: blur(10px);
+}
+
+/* The conversion card. Accent frame + lift so the eye lands here first. */
+.panel-card.is-highlight {
+  border-color: rgba(255, 106, 31, 0.5);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55),
+              0 0 0 1px rgba(255, 106, 31, 0.1);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--zinc);
+}
+
+.field {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  color: #fff;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 1rem;                 /* >=16px: stops iOS auto-zoom on focus */
+  background: rgba(195, 203, 199, 0.07);
+  border: 1px solid rgba(195, 203, 199, 0.24);
+  border-radius: var(--radius-control);
+  transition: border-color 0.25s var(--ease-out-quint),
+              background-color 0.25s var(--ease-out-quint);
+}
+.field::placeholder { color: #7C857F; }
+.field:hover { border-color: rgba(195, 203, 199, 0.4); }
+.field:focus { background: rgba(195, 203, 199, 0.11); border-color: var(--spark); outline: none; }
+
+/* Invalid state is JS-driven (.is-invalid), never bare :invalid — :invalid
+   fires before the visitor has typed anything, which is hostile. */
+.field.is-invalid { border-color: var(--danger); background: rgba(255, 122, 92, 0.07); }
+
+.field-error {
+  min-height: 1.1rem;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
+.field-status {
+  min-height: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.contact-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(195, 203, 199, 0.12);
+  transition: border-color 0.3s var(--ease-out-quint);
+}
+.contact-row:last-child { border-bottom: 0; }
+.contact-value { color: #fff; transition: color 0.3s var(--ease-out-quint); }
+.contact-row:hover { border-color: var(--spark); }
+.contact-row:hover .contact-value { color: var(--spark); }
+
+#map-slot iframe {
+  width: 100%;
+  height: 240px;
+  border: 0;
+  display: block;
+  border-radius: var(--radius-card);
+  /* Google's default map is bright white; match it to the palette */
+  filter: grayscale(1) invert(0.92) contrast(0.85) hue-rotate(180deg);
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .readable::before { inset: -1.5rem -1.75rem; }
+}
+
+@media (max-width: 768px) {
+  html { font-size: 16px; }
+  :root { --mesh: 56px; }
+  .mode-btn { width: 100%; padding: 0.9rem 1.2rem; }
+  .mode-label { font-size: 1.2rem; }
+  .panel-card { padding: 1.4rem; }
+  .btn-primary, .btn-ghost { padding: 0.75rem 1.1rem; font-size: 11px; }
+  /* backdrop-filter is expensive on mobile GPUs — drop it and raise the
+     background opacity instead. Visually near-identical, far cheaper. */
+  .panel-card, .mode-btn {
+    backdrop-filter: none;
+    background: rgba(9, 11, 10, 0.92);
+  }
+  .mode-btn.is-active { background: rgba(17, 66, 50, 0.92); }
+  .grid-overlay { opacity: 0.6; }
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION
+   The 3D scene stays (it is the content), but nothing moves on its own.
+   script.js reads the same query and swaps scrubbing for instant cuts.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .scroll-hint { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   MAP — link za navigaciju koji se pojavi ispod učitane mape
+   -------------------------------------------------------------------------- */
+.map-directions {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.85rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 10px;
+  background: rgba(9, 11, 10, 0.92);
+  backdrop-filter: none;
+}

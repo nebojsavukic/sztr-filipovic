@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>SZTR Filipović Kragujevac — Ograde, panelne ograde i kapije | Od 2003.</title>
+<meta name="description" content="SZTR Filipović, Kragujevac — proizvodnja i ugradnja panelnih ograda, pletene žice i PVC trave. Borivoja Agatonovića bb. Izlazak na teren i merenje besplatni. Radimo od 2003." />
+<meta name="theme-color" content="#0B0D0C" />
+<link rel="canonical" href="https://www.sztr-filipovic.rs/" />
+
+<!-- Open Graph — kako sajt izgleda kada se podeli na Facebooku/Viberu -->
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="sr_RS" />
+<meta property="og:title" content="SZTR Filipović — Ograde od proizvodnje do ugradnje" />
+<meta property="og:description" content="Panelne ograde, pletena žica i PVC trava. Kragujevac, Borivoja Agatonovića bb. Radimo od 2003." />
+
+<!--
+  LOCALBUSINESS SCHEMA
+  Ovo je ono što Google čita da bi firmu prikazao u lokalnoj pretrazi
+  ("ograde Kragujevac") i na mapi, sa tačnom adresom i telefonom.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HomeAndConstructionBusiness",
+  "name": "SZTR Filipović",
+  "description": "Proizvodnja i ugradnja panelnih ograda, pletene žice, PVC trave i kapija.",
+  "foundingDate": "2003",
+  "telephone": "+381 34 329 833",
+  "email": "zorafilipovic123@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Borivoja Agatonovića bb",
+    "postalCode": "34000",
+    "addressLocality": "Kragujevac",
+    "addressCountry": "RS"
+  },
+  "areaServed": "Kragujevac i Šumadijski okrug",
+  "priceRange": "$"
+}
+</script>
+
+<!-- Fonts: display Saira Condensed / body IBM Plex Sans / spec IBM Plex Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@700;900&display=swap" rel="stylesheet">
+
+<!-- Tailwind (CDN) — fixed 2D UI layers only. The 3D layer never touches it. -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          void:     '#0B0D0C', // near-black, green cast
+          zinc2:    '#C3CBC7', // galvanized steel
+          ral6005:  '#114232', // coated panel green
+          spark:    '#FF6A1F', // accent
+          concrete: '#A3ADA8'  // secondary text — LIGHTENED for readability
+        },
+        fontFamily: {
+          display: ['"Saira Condensed"', 'Impact', 'sans-serif'],
+          body:    ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+          spec:    ['"IBM Plex Mono"', 'ui-monospace', 'monospace']
+        }
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="style.css" />
+
+<!-- ============================================================
+     BOOTSTRAP GUARD — dijagnostika umesto praznog ekrana.
+
+     Klasična inline skripta, NAMERNO pre svih CDN poziva. Ako neka
+     biblioteka ne stigne ili WebGL nije dostupan, posetilac (i vi)
+     dobijate jasnu poruku umesto crne stranice.
+     ============================================================ -->
+<script>
+(function () {
+  window.__SZTR_DIAG = {
+    protocol: location.protocol,
+    webgl: null, three: null, gsap: null, model: null, ready: false, errors: []
+  };
+
+  // Da li uređaj uopšte podržava WebGL?
+  try {
+    var c = document.createElement('canvas');
+    window.__SZTR_DIAG.webgl = !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch (e) { window.__SZTR_DIAG.webgl = false; }
+
+  function panel(title, lines) {
+    if (document.getElementById('sztr-fatal')) return;
+    var d = document.createElement('div');
+    d.id = 'sztr-fatal';
+    // Stilovi su inline: ako style.css nije stigao, poruka i dalje radi.
+    d.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;' +
+      'align-items:center;justify-content:center;padding:24px;' +
+      'background:#0B0D0C;color:#C3CBC7;font:15px/1.6 system-ui,sans-serif';
+    d.innerHTML =
+      '<div style="max-width:560px">' +
+      '<p style="font:700 26px/1.1 system-ui;color:#fff;margin:0 0 14px">' + title + '</p>' +
+      '<div style="border-left:3px solid #FF6A1F;padding-left:16px">' + lines + '</div>' +
+      '<p style="margin-top:20px;font-size:13px;color:#7C857F">' +
+      'Pritisnite F12 &rarr; kartica Console za pun tehnički ispis.</p></div>';
+    document.body && document.body.appendChild(d);
+  }
+
+  // 1) file:// — najčešći uzrok praznog ekrana pri lokalnom radu.
+  if (location.protocol === 'file:') {
+    document.addEventListener('DOMContentLoaded', function () {
+      panel('Sajt je otvoren kao datoteka, ne kao sajt',
+        '<p>Otvorili ste <code>index.html</code> duplim klikom, pa adresa počinje sa ' +
+        '<code>file://</code>. U tom režimu pregledač iz bezbednosnih razloga blokira ' +
+        'učitavanje 3D modela i modula — zato je ekran prazan.</p>' +
+        '<p style="margin-top:12px"><b>Rešenje:</b> objavite sajt na GitHub Pages ' +
+        '(radiće odmah), ili lokalno pokrenite <code>npx serve .</code> i otvorite ' +
+        '<code>http://localhost:3000</code>.</p>');
+    });
+    return;
+  }
+
+  // 2) WebGL isključen ili nepodržan.
+  if (window.__SZTR_DIAG.webgl === false) {
+    document.addEventListener('DOMContentLoaded', function () {
+      panel('3D prikaz nije dostupan na ovom uređaju',
+        '<p>Pregledač je prijavio da WebGL nije podržan ili je isključen. ' +
+        'Sav tekst i kontakt forma rade normalno — nedostaje samo 3D animacija.</p>' +
+        '<p style="margin-top:12px">Pokušajte sa Chrome ili Firefox pregledačem, ' +
+        'ili uključite hardversko ubrzanje u podešavanjima.</p>');
+    });
+    return;
+  }
+
+  window.addEventListener('error', function (e) {
+    window.__SZTR_DIAG.errors.push(String(e.message || e.type));
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    window.__SZTR_DIAG.errors.push('Promise: ' + String(e.reason));
+  });
+
+  // 3) Watchdog: ako se za 15 sekundi ništa ne pokrene, reci ZAŠTO.
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var D = window.__SZTR_DIAG;
+      if (D.ready) return;
+      var ok = function (v) { return v === true ? '&#10003; u redu' : (v === false ? '&#10007; NIJE u&#269;itano' : '&mdash;'); };
+      panel('Sajt se nije pokrenuo do kraja',
+        '<p>Provera:</p><ul style="margin:10px 0;padding-left:18px">' +
+        '<li>Three.js (3D biblioteka): ' + ok(D.three) + '</li>' +
+        '<li>GSAP (animacije): ' + ok(D.gsap) + '</li>' +
+        '<li>WebGL podrška: ' + ok(D.webgl) + '</li>' +
+        '<li>3D model <code>assets/ograda.glb</code>: ' + ok(D.model) + '</li>' +
+        '</ul>' +
+        (D.errors.length
+          ? '<p style="font-size:13px;color:#FF7A5C">Greška: ' + D.errors[0] + '</p>'
+          : '<p style="font-size:13px;color:#7C857F">Najverovatnije je internet veza prekinula ' +
+            'učitavanje biblioteka sa CDN-a. Osvežite stranicu.</p>'));
+    }, 15000);
+  });
+})();
+</script>
+
+<noscript>
+  <div style="padding:24px;background:#0B0D0C;color:#C3CBC7;font:16px/1.6 system-ui,sans-serif">
+    <p><b>SZTR Filipović</b> &mdash; Za 3D prikaz je potreban JavaScript.</p>
+    <p>Pozovite nas na <a href="tel:+38134329833" style="color:#FF6A1F">034 329 833</a>
+       ili pišite na <a href="mailto:zorafilipovic123@gmail.com" style="color:#FF6A1F">zorafilipovic123@gmail.com</a>.<br />
+       Radionica: Borivoja Agatonovi&#263;a bb, 34000 Kragujevac.</p>
+  </div>
+</noscript>
+
+<!-- GSAP — classic UMD tags, attaches window.gsap / window.ScrollTrigger -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+
+<!-- Three.js via import map — no bundler, no build step -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body class="bg-void text-zinc2 font-body antialiased">
+
+<!-- LOADER — covers the first frame, removed from the DOM when ready -->
+<div id="loader" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-void">
+  <p class="font-display text-3xl font-900 uppercase tracking-tight text-white">SZTR Filipović</p>
+  <p class="mt-2 font-spec text-[11px] uppercase tracking-[0.3em] text-concrete">Ograde od 2003.</p>
+  <div class="mt-8 h-[3px] w-56 overflow-hidden rounded-full bg-white/10">
+    <div id="loader-bar" class="h-full w-0 rounded-full bg-spark transition-[width] duration-200 ease-out"></div>
+  </div>
+  <p id="loader-pct" class="mt-3 font-spec text-[11px] tabular-nums text-concrete">0%</p>
+</div>
+
+<!-- WEBGL LAYER — ONE fixed canvas shared by all four screens -->
+<canvas id="webgl" aria-hidden="true"></canvas>
+
+<!-- Signature wire-grid overlay. Pure CSS, zero GPU cost. -->
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<!-- Higgsfield neural grass loop. preload="none" — no decode until requested. -->
+<video id="grass-video" class="sr-only" muted loop playsinline preload="none" crossorigin="anonymous">
+  <source src="./assets/higgsfield-trava-loop.mp4" type="video/mp4" />
+</video>
+
+<!-- HEADER -->
+<header class="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-5 py-4 md:px-10 md:py-5">
+  <a href="#hero" class="font-display text-lg font-900 uppercase leading-none tracking-tight text-white md:text-xl">
+    SZTR&nbsp;Filipović
+  </a>
+  <div class="flex items-center gap-3">
+    <a href="tel:+38134329833" class="btn-ghost hidden sm:inline-block">034 329 833</a>
+    <a href="#kontakt" class="btn-primary">Besplatna procena</a>
+  </div>
+</header>
+
+<!-- SECTION RAIL — plain-language labels -->
+<nav id="rail" class="fixed right-6 top-1/2 z-50 hidden -translate-y-1/2 lg:block" aria-label="Sekcije">
+  <ul class="flex flex-col items-end gap-4 font-spec text-[11px] uppercase tracking-[0.16em]">
+    <li><a href="#hero"      class="rail-link is-active" data-rail="hero">Početak</a></li>
+    <li><a href="#tradicija" class="rail-link" data-rail="tradicija">O nama</a></li>
+    <li><a href="#program"   class="rail-link" data-rail="program">Naš program</a></li>
+    <li><a href="#kontakt"   class="rail-link" data-rail="kontakt">Ponuda</a></li>
+  </ul>
+</nav>
+
+<main id="scroll-content">
+
+  <!-- ===== SCREEN 1 — HERO ===== -->
+  <section id="hero" class="screen" style="height:200vh">
+    <div class="sticky top-0 flex h-[100svh] items-center justify-center px-5 text-center">
+      <div id="hero-copy" class="readable max-w-4xl">
+        <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-spark md:text-xs">Kragujevac · porodična radionica od 2003.</p>
+        <h1 class="mt-5 font-display text-[14vw] font-900 uppercase leading-[0.86] tracking-tight text-white md:text-[8vw]">
+          SZTR Filipović
+          <span class="mt-1 block text-zinc2">Od proizvodnje<br class="md:hidden" /> do ugradnje</span>
+        </h1>
+        <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc2 md:text-lg">
+          Ograde za dvorište, plac i baštu. Sami ih pravimo, sami ih ugrađujemo —
+          vi ne tražite nikoga drugog. Radimo u Kragujevcu i celom Šumadijskom okrugu.
+        </p>
+        <a href="#kontakt" class="btn-primary mt-8 inline-block md:text-xs">Koliko me košta?</a>
+      </div>
+      <p class="scroll-hint font-spec text-[10px] uppercase tracking-[0.3em] text-concrete">Skrolujte nadole</p>
+    </div>
+  </section>
+
+  <!-- ===== SCREEN 2 — PRIČA ===== -->
+  <section id="tradicija" class="screen" style="height:200vh">
+    <div class="sticky top-0 flex h-[100svh] items-center px-5 md:px-16">
+      <div class="readable max-w-xl">
+        <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-spark">Naša priča · od 2003.</p>
+        <h2 class="mt-4 font-display text-[13vw] font-900 uppercase leading-[0.9] text-white sm:text-6xl md:text-7xl">
+          Prvo stub.<br />Onda sve ostalo.
+        </h2>
+        <div class="mt-7 space-y-4 text-base leading-relaxed text-zinc2 md:text-lg">
+          <p>
+            Prvu ogradu smo postavili 2003. godine, sa jednim aparatom za varenje i starim kombijem.
+            Od tada je isti red poteza: beton, stub, pa panel. Zato ograde koje smo radili
+            pre dvadeset godina i danas stoje prave.
+          </p>
+          <p>
+            Panele sečemo na meru vašeg terena, a ne obrnuto. Ako je dvorište u nagibu,
+            ograda će ga lepo ispratiti — bez rupa ispod i bez „stepenica“.
+          </p>
+        </div>
+        <dl class="mt-9 grid grid-cols-3 gap-4 border-t border-white/15 pt-6 sm:gap-6">
+          <div>
+            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Radimo od</dt>
+            <dd class="mt-1 font-display text-3xl font-900 text-white">2003.</dd>
+          </div>
+          <div>
+            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Postavljenih ograda</dt>
+            <dd class="mt-1 font-display text-3xl font-900 text-white">1200+</dd>
+          </div>
+          <div>
+            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Garancija</dt>
+            <dd class="mt-1 font-display text-3xl font-900 text-white">10 god.</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SCREEN 3 — PROGRAM ===== -->
+  <section id="program" class="screen" style="height:150vh">
+    <div class="sticky top-0 flex h-[100svh] flex-col justify-between px-5 py-24 md:px-16 md:py-28">
+      <div class="readable max-w-xl">
+        <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-spark">Šta sve radimo</p>
+        <h2 class="mt-3 font-display text-[12vw] font-900 uppercase leading-none text-white sm:text-5xl md:text-6xl">
+          Izaberite, pa pogledajte
+        </h2>
+        <p id="program-desc" class="mt-4 min-h-[5rem] max-w-lg text-base leading-relaxed text-zinc2 md:text-lg">
+          Najčešći izbor za dvorišta i kuće. Zeleni plastificirani panel koji ne rđa,
+          lepo izgleda sa obe strane i ne traži nikakvo održavanje.
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap" role="group" aria-label="Izbor vrste ograde">
+        <button type="button" class="mode-btn is-active" data-mode="panel">
+          <span class="mode-label">Panelne Ograde</span>
+          <span class="mode-spec">Zelena plastifikacija</span>
+        </button>
+        <button type="button" class="mode-btn" data-mode="wire">
+          <span class="mode-label">Pletena Žica</span>
+          <span class="mode-spec">Pocinkovana</span>
+        </button>
+        <button type="button" class="mode-btn" data-mode="grass">
+          <span class="mode-label">PVC Trava</span>
+          <span class="mode-spec">Hlad i privatnost</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SCREEN 4 — KONTAKT ===== -->
+  <section id="kontakt" class="screen" style="height:150vh">
+    <div class="sticky top-0 flex min-h-[100svh] items-center px-5 py-24 md:px-16">
+      <div class="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+
+        <!-- The form is the conversion point, so it gets the accent frame -->
+        <div class="panel-card is-highlight">
+          <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-spark">Odgovor u roku od 24 sata</p>
+          <h2 class="mt-3 font-display text-4xl font-900 uppercase leading-[0.95] text-white md:text-5xl">
+            Sve merimo i ugrađujemo mi
+          </h2>
+          <p class="mt-4 text-base leading-relaxed text-zinc2">
+            Vaše je samo da nam kažete koliko metara vam otprilike treba.
+            Ako niste sigurni — napišite grubu procenu, izađemo i izmerimo besplatno.
+          </p>
+
+          <form id="quote-form" class="mt-7 space-y-4" novalidate>
+            <div>
+              <label for="f-name" class="field-label">Kako se zovete?</label>
+              <input id="f-name" name="name" type="text" class="field" placeholder="Npr. Milan Jovanović" autocomplete="name" required />
+              <p class="field-error" data-error-for="f-name"></p>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="f-phone" class="field-label">Broj telefona</label>
+                <input id="f-phone" name="phone" type="tel" class="field" placeholder="Npr. 064 123 4567" autocomplete="tel" required />
+                <p class="field-error" data-error-for="f-phone"></p>
+              </div>
+              <div>
+                <label for="f-meters" class="field-label">Otprilike koliko metara?</label>
+                <input id="f-meters" name="meters" type="number" min="1" step="1" class="field" placeholder="Npr. 40" required />
+                <p class="field-error" data-error-for="f-meters"></p>
+              </div>
+            </div>
+            <div>
+              <label for="f-note" class="field-label">Želite nešto da dodate? <span class="text-concrete">(nije obavezno)</span></label>
+              <textarea id="f-note" name="note" rows="3" class="field resize-none" placeholder="Npr. teren je u nagibu, treba mi i kapija za auto..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-lg w-full">Pošaljite upit</button>
+            <p id="form-status" class="field-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <div class="flex flex-col gap-6">
+          <div class="panel-card">
+            <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-concrete">Radije biste da pozovete?</p>
+            <div class="mt-4 space-y-1">
+              <a href="tel:+38134329833" class="contact-row">
+                <span class="font-spec text-[10px] uppercase tracking-[0.15em] text-concrete">Telefon · radnim danima 08–17h</span>
+                <span class="contact-value font-display text-3xl font-900">034 329 833</span>
+              </a>
+              <a href="mailto:zorafilipovic123@gmail.com" class="contact-row">
+                <span class="font-spec text-[10px] uppercase tracking-[0.15em] text-concrete">E-pošta</span>
+                <span class="contact-value font-display text-xl font-900 break-all">zorafilipovic123@gmail.com</span>
+              </a>
+              <div class="contact-row">
+                <span class="font-spec text-[10px] uppercase tracking-[0.15em] text-concrete">Adresa radionice</span>
+                <span class="contact-value font-display text-2xl font-900">Borivoja Agatonovića bb</span>
+                <span class="text-sm text-concrete">34000 Kragujevac</span>
+              </div>
+            </div>
+            <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+              <a href="tel:+38134329833" class="btn-primary flex-1 text-center">Pozovite odmah</a>
+              <a href="mailto:zorafilipovic123@gmail.com" class="btn-ghost flex-1 text-center">Pošaljite e-mail</a>
+            </div>
+          </div>
+
+          <!-- Map loads only on click: saves ~800 KB on first paint -->
+          <div id="map-slot" class="panel-card relative flex min-h-[200px] items-center justify-center overflow-hidden p-0">
+            <button id="map-load" type="button" class="btn-ghost">Prikaži gde smo</button>
+            <p class="pointer-events-none absolute bottom-4 left-5 font-spec text-[10px] uppercase tracking-[0.15em] text-concrete">
+              Borivoja Agatonovića bb, Kragujevac
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <footer class="relative z-10 border-t border-white/10 px-5 py-8 md:px-16">
+    <p class="font-spec text-[10px] uppercase leading-relaxed tracking-[0.18em] text-concrete">
+      SZTR Filipović · Borivoja Agatonovića bb, 34000 Kragujevac<br />
+      Telefon 034 329 833 · zorafilipovic123@gmail.com<br />
+      Proizvodnja i ugradnja ograda od 2003.
+    </p>
+  </footer>
+</main>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
