@@ -937,3 +937,225 @@ html, body { overflow-x: clip; }
 #radovi:has(#galerija-blok[hidden]):has(#recenzije-blok[hidden]) {
   display: none;
 }
+
+/* ==========================================================================
+   TELEFON — sitno doterivanje posle provere na uredjaju
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* Naslovi su na uskom ekranu bili preblizu ivice. */
+  #hero h1 { font-size: clamp(2rem, 11vw, 3.2rem); }
+  #tradicija h2 { font-size: clamp(1.8rem, 9vw, 2.8rem); }
+  #program h2, #kontakt h2 { font-size: clamp(1.6rem, 8vw, 2.4rem); }
+
+  /* Zaglavlje: dva dugmeta se na uskom ekranu sudarala sa logom. */
+  header { padding-left: 1rem; padding-right: 1rem; }
+  header .btn-primary { padding: 0.65rem 0.9rem; font-size: 10px; }
+
+  /* Sekcije dobijaju vise prostora odozgo, jer je zaglavlje srazmerno vise. */
+  #hero > .sticky,
+  #tradicija > .sticky,
+  #program > .sticky { padding-top: 5.5rem; }
+}
+
+/* --------------------------------------------------------------------------
+   UGRADJENI PROZORI (Instagram, Facebook, Viber)
+
+   Ti prozori imaju manje memorije i ume da im se graficki sloj prekine.
+   Kada 3D otpadne, klasa bez-3d vec vraca stranicu na obican prikaz - ovde
+   samo osiguravamo da tekst tada ne ostane prevelik za mali ekran.
+   -------------------------------------------------------------------------- */
+.bez-3d #hero h1 { font-size: clamp(2rem, 9vw, 4rem); }
+.bez-3d .screen > .sticky { justify-content: flex-start; }
+
+/* ==========================================================================
+   MENI NA TELEFONU I STALNA TRAKA NA DNU
+   ========================================================================== */
+
+/* Sakriva se na malim ekranima, vidi se od 1024px navise. */
+.samo-veliki { display: none; }
+@media (min-width: 1024px) { .samo-veliki { display: inline-block; } }
+
+/* --------------------------------------------------------------------------
+   DUGME ZA MENI
+
+   44x44px je najmanja povrsina koju prosecan palac pouzdano pogadja - ispod
+   toga promasaji postaju cesti. Zato dugme ima tu velicinu i kad crte
+   izgledaju manje.
+   -------------------------------------------------------------------------- */
+.meni-dugme {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(195, 203, 199, 0.3);
+  border-radius: var(--radius-control);
+}
+@media (min-width: 1024px) { .meni-dugme { display: none; } }
+
+.meni-crta {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--zinc);
+  border-radius: 2px;
+  transition: transform .3s var(--ease-out-quint),
+              opacity .2s linear;
+}
+
+/* Otvoreno stanje: gornja i donja crta se ukrstaju, srednja nestane. */
+.meni-dugme[aria-expanded="true"] .meni-crta:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.meni-dugme[aria-expanded="true"] .meni-crta:nth-child(2) { opacity: 0; }
+.meni-dugme[aria-expanded="true"] .meni-crta:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* --------------------------------------------------------------------------
+   ZASTOR I FIOKA
+   -------------------------------------------------------------------------- */
+.meni-zastor {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(6, 8, 7, 0.7);
+  opacity: 0;
+  transition: opacity .3s var(--ease-out-quint);
+}
+.meni-zastor.otvoren { opacity: 1; }
+
+.meni-fioka {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  width: min(88vw, 360px);
+  max-width: 100%;
+  padding: 1.25rem 1.5rem 2rem;
+  background: #0B0D0C;
+  border-left: 1px solid rgba(195, 203, 199, 0.16);
+  /* translate3d, ne left/right: pomeranje slojem na grafickoj kartici ne
+     tera pregledac da iznova racuna raspored pri svakom kadru. */
+  -webkit-transform: translate3d(100%, 0, 0);
+          transform: translate3d(100%, 0, 0);
+  transition: -webkit-transform .35s var(--ease-out-quint);
+  transition: transform .35s var(--ease-out-quint);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;    /* skrol u fioci ne pomera stranicu iza */
+  /* Prostor za sistemsku traku na iPhone-u. */
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+}
+.meni-fioka.otvoren {
+  -webkit-transform: translate3d(0, 0, 0);
+          transform: translate3d(0, 0, 0);
+}
+
+.meni-vrh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(195, 203, 199, 0.14);
+}
+.meni-zatvori {
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--zinc);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+.meni-zatvori:hover { color: var(--spark); }
+
+.meni-lista { flex: 1; margin: 0; padding: 1.5rem 0 0; list-style: none; }
+.meni-lista li + li { margin-top: .25rem; }
+.meni-lista a {
+  display: block;
+  padding: .95rem 0;
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--zinc);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(195, 203, 199, .08);
+  transition: color .25s var(--ease-out-quint);
+}
+.meni-lista a:hover, .meni-lista a:focus-visible { color: var(--spark); }
+
+.meni-kontakt { padding-top: 1.5rem; }
+.meni-adresa {
+  margin: 1rem 0 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  line-height: 1.8;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--concrete);
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   STALNA TRAKA NA DNU — samo telefon
+   -------------------------------------------------------------------------- */
+.donja-traka { display: none; }
+
+@media (max-width: 1023px) {
+  .donja-traka {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    gap: 1px;
+    background: rgba(195, 203, 199, .16);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .donja-poziv,
+  .donja-upit {
+    flex: 1;
+    padding: 1rem .5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-align: center;
+    text-decoration: none;
+  }
+  .donja-poziv { background: var(--spark); color: #16100B; }
+  .donja-upit  { background: #0B0D0C; color: var(--zinc); }
+
+  /* Traka pokriva dno ekrana, pa podnozju dajemo prostor da ne ostane
+     zaklonjeno poslednje slovo. */
+  footer { padding-bottom: 5.5rem; }
+}
+
+/* --------------------------------------------------------------------------
+   STROZE ZATVARANJE VODORAVNOG PRELIVANJA
+
+   overflow-x na html i body vec postoji. Ovo je drugi sloj: nijedan
+   element ne sme biti siri od svog roditelja, ni kad ima dug tekst bez
+   razmaka (dugacka e-posta, adresa, broj).
+   -------------------------------------------------------------------------- */
+img, video, canvas, iframe, table { max-width: 100%; }
+.panel-card, .mode-btn, .recenzija, .rad-kartica, .field { max-width: 100%; }
+#scroll-content, #scroll-content > section { max-width: 100vw; }
+
+/* Duge reci bez razmaka lome red umesto da guraju stranicu u sirinu. */
+.contact-value, .field-error, .meni-adresa { overflow-wrap: break-word; }
+
+/* Fioka je iznad svega, pa 3D sloj ne sme da se provlaci kroz nju. */
+.meni-fioka, .meni-zastor { isolation: isolate; }

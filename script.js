@@ -400,8 +400,10 @@ const Stage = {
     this.scene.fog = new THREE.Fog(CONFIG.colors.ground, 12, 34);
 
     this.camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 120);
-    this.camera.position.set(...CONFIG.cam.heroStart.pos);
-    this.camTarget.set(...CONFIG.cam.heroStart.look);
+    this._uklopiKadar();
+    this.camera.updateProjectionMatrix();
+    this.camera.position.set(CONFIG.cam.heroStart.pos[0], CONFIG.cam.heroStart.pos[1], CONFIG.cam.heroStart.pos[2]);
+    this.camTarget.set(CONFIG.cam.heroStart.look[0], CONFIG.cam.heroStart.look[1], CONFIG.cam.heroStart.look[2]);
 
     this._setupLights();
     this._bindEvents();
@@ -473,9 +475,38 @@ const Stage = {
     }
   },
 
+  /* ------------------------------------------------------------------
+     UKLAPANJE OGRADE NA USKOM EKRANU
+
+     Kamera ima vidno polje od 42 stepena mereno po VISINI. Na racunaru je
+     ekran siri nego visi, pa se ograda siroka 4,2 jedinice lepo uklopi.
+     Na telefonu uspravno je obrnuto - ekran je dvaput visi nego siri, pa
+     vodoravno vidno polje postaje usko i ograda izlazi van kadra levo i
+     desno.
+
+     Resenje: na uskom ekranu sirimo vidno polje tacno onoliko koliko treba
+     da vodoravni obuhvat ostane isti kao na racunaru. Ograda se tako uvek
+     vidi cela, bez diranja putanje kamere.
+     ------------------------------------------------------------------ */
+  _uklopiKadar() {
+    const osnovniUgao = 42;              /* sto je dobro na racunaru */
+    const osnovniOdnos = 16 / 9;
+    const odnos = this.camera.aspect;
+
+    if (odnos >= osnovniOdnos) {
+      this.camera.fov = osnovniUgao;
+    } else {
+      const rad = (osnovniUgao * Math.PI) / 180;
+      const prosireno = 2 * Math.atan(Math.tan(rad / 2) * (osnovniOdnos / odnos));
+      /* Gornja granica: preko 78 stepeni slika pocinje da se izoblicava. */
+      this.camera.fov = Math.min(78, (prosireno * 180) / Math.PI);
+    }
+  },
+
   _resize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.camera.aspect = w / h;
+    this._uklopiKadar();
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(this._dpr);
     this.renderer.setSize(w, h);
@@ -1489,6 +1520,86 @@ const Dokazi = {
   }
 };
 
+/* ==========================================================================
+   MENI NA TELEFONU
+   --------------------------------------------------------------------------
+   Fioka koja klizi s desne strane. Namerno NE zakljucava skrolovanje
+   stranice iza sebe: uobicajen nacin za to je position:fixed na body, sto
+   trenutno pomeri stranicu na vrh - ScrollTrigger bi tada morao da premeri
+   sve granice i kamera bi poskocila. Umesto toga fioka ima
+   overscroll-behavior: contain, pa skrol prsta ostaje u njoj.
+   ========================================================================== */
+const Meni = {
+  otvoren: false,
+
+  init() {
+    this.dugme   = document.getElementById('meni-dugme');
+    this.fioka   = document.getElementById('meni-fioka');
+    this.zastor  = document.getElementById('meni-zastor');
+    this.zatvori = document.getElementById('meni-zatvori');
+    if (!this.dugme || !this.fioka || !this.zastor) return;
+
+    this.dugme.addEventListener('click', () => this.prebaci());
+    this.zastor.addEventListener('click', () => this.zatvoriMeni());
+    if (this.zatvori) this.zatvori.addEventListener('click', () => this.zatvoriMeni());
+
+    /* Klik na link zatvara fioku; skrolovanje radi Navigacija. */
+    this.fioka.querySelectorAll('a[href^="#"]').forEach((a) => {
+      a.addEventListener('click', () => this.zatvoriMeni());
+    });
+
+    /* Escape zatvara - ocekivano ponasanje za svaki iskacuci sloj. */
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.otvoren) this.zatvoriMeni();
+    });
+
+    /* Ako se prozor prosiri preko 1024px, fioka nema smisla. */
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024 && this.otvoren) this.zatvoriMeni();
+    });
+  },
+
+  prebaci() { this.otvoren ? this.zatvoriMeni() : this.otvoriMeni(); },
+
+  otvoriMeni() {
+    this.otvoren = true;
+    this.zastor.hidden = false;
+    this.fioka.hidden = false;
+    this.fioka.setAttribute('aria-hidden', 'false');
+    this.dugme.setAttribute('aria-expanded', 'true');
+    this.dugme.setAttribute('aria-label', 'Zatvori meni');
+
+    /* Jedan kadar cekanja: element mora biti u rasporedu PRE nego sto mu
+       dodamo klasu, inace pregledac preskoci prelaz i fioka iskoci. */
+    requestAnimationFrame(() => {
+      this.zastor.classList.add('otvoren');
+      this.fioka.classList.add('otvoren');
+    });
+
+    const prvi = this.fioka.querySelector('a, button');
+    if (prvi) setTimeout(() => prvi.focus(), 350);
+  },
+
+  zatvoriMeni() {
+    if (!this.otvoren) return;
+    this.otvoren = false;
+    this.zastor.classList.remove('otvoren');
+    this.fioka.classList.remove('otvoren');
+    this.fioka.setAttribute('aria-hidden', 'true');
+    this.dugme.setAttribute('aria-expanded', 'false');
+    this.dugme.setAttribute('aria-label', 'Otvori meni');
+
+    /* Sklanjamo iz rasporeda tek kad prelaz zavrsi, da se ne preseca. */
+    setTimeout(() => {
+      if (this.otvoren) return;
+      this.zastor.hidden = true;
+      this.fioka.hidden = true;
+    }, 350);
+
+    this.dugme.focus();
+  }
+};
+
 const UI = {
   init() {
     this._modes();
@@ -1496,6 +1607,7 @@ const UI = {
     this._map();
     Dokazi.init();
     Navigacija.init();
+    Meni.init();
   },
 
   /* ---- Screen 3 material switcher ---- */
@@ -1703,70 +1815,140 @@ const Loader = {
   }
 };
 
-async function boot() {
-  /* --------------------------------------------------------------------
-     STARI UREDJAJI
+/* ==========================================================================
+   POKRETANJE PO FAZAMA
+   --------------------------------------------------------------------------
+   Ranije je pokretanje bilo jedan niz naredbi. Ako bi bilo koja pukla -
+   makar i najsitnija, u pripremi 3D scene - sve posle nje se preskakalo,
+   ukljucujuci i red koji gasi cuvara. Posetilac je posle 15 sekundi dobijao
+   poruku "Sajt se nije pokrenuo do kraja", iako su sve provere pokazivale
+   kvacicu: biblioteke i model SU bili ucitani, ali je pripremа scene pukla
+   posle toga.
 
-     Bez WebGL2 nema 3D sloja - ali sajt zbog toga NE sme da stane. Tekst,
-     telefon, adresa i forma su ono zbog cega kupac dolazi; 3D je ukras.
-     Canvas se uklanja, klasa 'bez-3d' vraca sekcije na normalnu visinu i
-     stranica se ponasa kao obican, brz sajt.
-     -------------------------------------------------------------------- */
-  if (!imaWebGL2) {
+   Na telefonu je to daleko verovatnije nego na racunaru, a najverovatnije u
+   ugradjenom prozoru Instagrama ili Facebooka, gde ima manje memorije i
+   graficki sloj ume da se prekine bez upozorenja.
+
+   Sada svaka faza stoji zasebno. Ako neka padne, upisuje se u dnevnik i
+   prelazi se na sledecu. Sajt zavrsi pokretanje uvek - u najgorem slucaju
+   bez 3D sloja, ali sa tekstom, telefonom, adresom i formom, a to je ono
+   zbog cega kupac i dolazi.
+   ========================================================================== */
+function faza(ime, posao) {
+  try {
+    posao();
+    return true;
+  } catch (err) {
+    console.error('[SZTR] Faza "' + ime + '" nije uspela:', err);
+    DIAG.errors.push(ime + ': ' + (err && err.message ? err.message : err));
+    DIAG.faza = ime;
+    return false;
+  }
+}
+
+/* Sajt bez 3D sloja: uklanja se platno, sekcije se vracaju na normalnu
+   visinu i stranica radi kao obican, brz sajt. */
+function bez3D(razlog) {
+  console.info('[SZTR] Nastavljamo bez 3D sloja - ' + razlog);
+  try { Stage.renderer && Stage.renderer.setAnimationLoop(null); } catch (e) {}
+  const cv = document.getElementById('webgl');
+  if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
+  document.documentElement.className += ' bez-3d';
+}
+
+async function boot() {
+  /* Sajt se smatra pokrenutim cim je UPOTREBLJIV, ne kad je 3D gotov.
+     Ovo je najvaznija izmena: cuvar se gasi ovde, pa nijedan kasniji
+     problem u 3D sloju ne moze da ostavi posetioca na poruci o gresci. */
+  const zavrsiPokretanje = () => {
     DIAG.ready = true;
-    const cv = document.getElementById('webgl');
-    if (cv) cv.remove();
-    document.documentElement.classList.add('bez-3d');
-    Loader.finish();
-    UI.init();
-    console.info('[SZTR] WebGL2 nije dostupan - sajt radi bez 3D sloja.');
+    try { Loader.finish(); } catch (e) {
+      const l = document.getElementById('loader');
+      if (l && l.parentNode) l.parentNode.removeChild(l);
+    }
+  };
+
+  if (!imaWebGL2) {
+    bez3D('uredjaj nema WebGL2');
+    faza('UI', () => UI.init());
+    zavrsiPokretanje();
     return;
   }
 
-  Stage.init();
+  if (!faza('priprema platna', () => Stage.init())) {
+    bez3D('platno se nije otvorilo');
+    faza('UI', () => UI.init());
+    zavrsiPokretanje();
+    return;
+  }
 
-  await Fence.load((p) => Loader.set(p * 0.9));
+  /* Ucitavanje modela ima sopstvenu rezervu: ako padne, gradi se
+     proceduralna ograda. Zato ovde ne moze da baci gresku. */
+  try {
+    await Fence.load((p) => Loader.set(p * 0.9));
+  } catch (err) {
+    console.error('[SZTR] Model:', err);
+    Fence.usedFallback = true;
+    Fence.template = Fence._buildProcedural();
+  }
 
-  Rooms.build();
-  WireMorph.build();
-  GrassVideo.build();
-  Choreo.init();
-  UI.init();
+  const scenaOk =
+    faza('sobe',    () => Rooms.build()) &&
+    faza('cestice', () => WireMorph.build()) &&
+    faza('trava',   () => GrassVideo.build());
 
-  /* Compile shaders before the first visible frame so the fly-through
-     does not stutter in its opening milliseconds. */
-  Stage.renderer.compile(Stage.scene, Stage.camera);
+  if (!scenaOk) {
+    bez3D('priprema scene nije uspela');
+    faza('UI', () => UI.init());
+    zavrsiPokretanje();
+    return;
+  }
 
-  ScrollTrigger.refresh();
-  Loader.finish();
-  DIAG.ready = true;
+  faza('kretanje kamere', () => Choreo.init());
+  faza('UI', () => UI.init());
 
-  /* Otvaranje sajta sa #adresom (npr. iz podeljenog linka): pretraživač
-     bi skočio pre nego što je scena spremna. Vraćamo na vrh i vodimo. */
+  /* Prevodjenje senki unapred sprecava trzanje na prvim kadrovima, ali na
+     telefonu ume da bude skupo i nije neophodno - zato je preskacemo tamo
+     i nikad ne dozvoljavamo da zaustavi pokretanje. */
+  if (!Quality.isPhone) {
+    faza('prevodjenje senki', () => Stage.renderer.compile(Stage.scene, Stage.camera));
+  }
+
+  faza('merenje granica', () => ScrollTrigger.refresh());
+
+  zavrsiPokretanje();
+
+  /* Na telefonu se posle prvog skrolovanja adresna traka skupi i visina se
+     promeni. Jedno kasnije merenje poravnava granice bez trzanja. */
+  if (Quality.isPhone) {
+    setTimeout(() => {
+      Prozor.visina = window.innerHeight;
+      try { ScrollTrigger.refresh(); } catch (e) {}
+    }, 1200);
+  }
+
   if (location.hash) {
     const cilj = document.querySelector(location.hash);
     if (cilj) {
       window.scrollTo(0, 0);
-      setTimeout(() => Navigacija.vodi(cilj), 400);
+      setTimeout(() => { try { Navigacija.vodi(cilj); } catch (e) {} }, 400);
     }
-  }   // gasi watchdog iz bootstrap guard-a u index.html
+  }
 
   console.info(
-    '[SZTR] Ograda izmerena — širina: ' + (Fence.bounds ? Fence.bounds.size.x.toFixed(2) : '?') +
-    ' visina: ' + (Fence.bounds ? Fence.bounds.size.y.toFixed(2) : '?') +
-    ' dubina: ' + (Fence.bounds ? Fence.bounds.size.z.toFixed(2) : '?')
-  );
-  console.info(
-    '[SZTR] Spremno · tier: ' + Quality.tier +
-    ' · DPR: ' + Quality.pixelRatio.toFixed(2) +
-    ' · AA: ' + Quality.antialias +
-    ' · anizotropija: ' + Quality.anisotropy +
-    ' · čestice: ' + Quality.particles +
-    ' · model: ' + (Fence.usedFallback ? 'proceduralni fallback' : CONFIG.modelPath)
+    '[SZTR] Spremno - tier: ' + Quality.tier +
+    ' | DPR: ' + Quality.pixelRatio.toFixed(2) +
+    ' | cestice: ' + Quality.particles +
+    ' | model: ' + (Fence.usedFallback ? 'rezervni' : CONFIG.modelPath) +
+    (DIAG.errors.length ? ' | preskocene faze: ' + DIAG.errors.length : '')
   );
 }
 
 boot().catch((err) => {
+  /* Do ovde se ne bi smelo stici - svaka faza vec hvata svoju gresku.
+     Ali ako ipak stigne, posetilac mora dobiti upotrebljiv sajt. */
+  DIAG.ready = true;
+  try { bez3D('neocekivana greska pri pokretanju'); } catch (e) {}
   console.error('[SZTR] Greška pri pokretanju:', err);
   Loader.el?.remove();   // never leave the visitor staring at a stuck loader
 });

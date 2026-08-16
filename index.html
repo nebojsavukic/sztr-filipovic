@@ -69,7 +69,8 @@
 (function () {
   window.__SZTR_DIAG = {
     protocol: location.protocol,
-    webgl: null, three: null, gsap: null, model: null, ready: false, errors: []
+    webgl: null, three: null, gsap: null, model: null, ready: false,
+    faza: null, errors: []
   };
 
   // Da li uređaj uopšte podržava WebGL?
@@ -146,11 +147,16 @@
         '<li>WebGL podrška: ' + ok(D.webgl) + '</li>' +
         '<li>3D model <code>assets/ograda.glb</code>: ' + ok(D.model) + '</li>' +
         '</ul>' +
+        (D.faza
+          ? '<p style="font-size:13px;color:#FF7A5C">Zastalo je u fazi: ' + D.faza + '</p>'
+          : '') +
         (D.errors.length
-          ? '<p style="font-size:13px;color:#FF7A5C">Greška: ' + D.errors[0] + '</p>'
-          : '<p style="font-size:13px;color:#7C857F">Najverovatnije je internet veza prekinula ' +
-            'učitavanje biblioteka sa CDN-a. Osvežite stranicu.</p>'));
-    }, 15000);
+          ? '<p style="font-size:13px;color:#FF7A5C">' + D.errors[0] + '</p>'
+          : '<p style="font-size:13px;color:#7C857F">Najverovatnije je veza prekinula ' +
+            'učitavanje biblioteka. Osvežite stranicu.</p>') +
+        '<p style="margin-top:16px"><a href="tel:+38134329833" style="color:#FF6A1F;' +
+        'font-weight:600;text-decoration:none">Pozovite nas: 034 329 833</a></p>');
+    }, 25000);
   });
 })();
 </script>
@@ -211,10 +217,51 @@
     SZTR&nbsp;Filipović
   </a>
   <div class="flex items-center gap-3">
-    <a href="tel:+38134329833" class="btn-ghost hidden sm:inline-block">034 329 833</a>
-    <a href="#kontakt" class="btn-primary">Besplatna procena</a>
+    <a href="tel:+38134329833" class="btn-ghost samo-veliki">034 329 833</a>
+    <a href="#kontakt" class="btn-primary samo-veliki">Besplatna procena</a>
+
+    <!-- Dugme za meni: samo na telefonu i tabletu (do 1024px).
+         aria-expanded citaju citaci ekrana i glasovna pomoc. -->
+    <button id="meni-dugme" class="meni-dugme" type="button"
+            aria-label="Otvori meni" aria-expanded="false" aria-controls="meni-fioka">
+      <span class="meni-crta"></span>
+      <span class="meni-crta"></span>
+      <span class="meni-crta"></span>
+    </button>
   </div>
 </header>
+
+<!-- ============================================================
+     MENI NA TELEFONU
+
+     Klizna fioka preko celog ekrana. Drzi iste linkove kao desni
+     meni na racunaru, plus telefon i adresu - jer je posetilac sa
+     telefona najcesce dosao da pozove, ne da cita.
+     ============================================================ -->
+<div id="meni-zastor" class="meni-zastor" hidden></div>
+
+<nav id="meni-fioka" class="meni-fioka" aria-label="Glavni meni" aria-hidden="true" hidden>
+  <div class="meni-vrh">
+    <span class="font-display text-lg font-900 uppercase text-white">Meni</span>
+    <button id="meni-zatvori" class="meni-zatvori" type="button" aria-label="Zatvori meni">&times;</button>
+  </div>
+
+  <ul class="meni-lista">
+    <li><a href="#hero">Početak</a></li>
+    <li><a href="#tradicija">O nama</a></li>
+    <li><a href="#program">Naš program</a></li>
+    <li><a href="#kontakt">Zatražite ponudu</a></li>
+  </ul>
+
+  <div class="meni-kontakt">
+    <a href="tel:+38134329833" class="btn-primary btn-lg" style="display:block;text-align:center">
+      Pozovite 034 329 833
+    </a>
+    <p class="meni-adresa">
+      Borivoja Agatonovića bb<br />34000 Kragujevac
+    </p>
+  </div>
+</nav>
 
 <!-- SECTION RAIL — plain-language labels -->
 <nav id="rail" class="fixed right-6 top-1/2 z-50 hidden -translate-y-1/2 lg:block" aria-label="Sekcije">
@@ -449,6 +496,18 @@
       </div>
     </div>
   </section>
+
+  <!-- ============================================================
+       STALNA TRAKA NA DNU — samo telefon
+
+       Kupac koji trazi ogradu najcesce zeli da pozove, a ne da cita.
+       Traka drzi taj korak nadohvat palca kroz ceo sajt, bez skrolovanja
+       nazad. Na racunaru je nema - tamo je broj stalno u zaglavlju.
+       ============================================================ -->
+  <div class="donja-traka">
+    <a href="tel:+38134329833" class="donja-poziv">Pozovite nas</a>
+    <a href="#kontakt" class="donja-upit">Zatražite ponudu</a>
+  </div>
 
   <footer class="relative z-10 border-t border-white/10 px-5 py-8 md:px-16">
     <p class="font-spec text-[10px] uppercase leading-relaxed tracking-[0.18em] text-concrete">
