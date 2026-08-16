@@ -1159,3 +1159,73 @@ img, video, canvas, iframe, table { max-width: 100%; }
 
 /* Fioka je iznad svega, pa 3D sloj ne sme da se provlaci kroz nju. */
 .meni-fioka, .meni-zastor { isolation: isolate; }
+
+/* ==========================================================================
+   BROJKE U ODELJKU "NASA PRICA" — prelivanje na telefonu
+   --------------------------------------------------------------------------
+   Tri brojke (2003. / Sumadiji / Besplatno) stoje u mrezi od tri kolone na
+   SVIM sirinama. Na telefonu je svaka kolona oko 110px, a rec "Besplatno" u
+   zbijenom pismu od 30px trazi oko 150px.
+
+   Zasto se onda nije prelomila? Zato sto elementi mreze podrazumevano imaju
+   min-width: auto - to im ne dozvoljava da se skupe ispod sirine sopstvenog
+   sadrzaja. Umesto da se tekst prelomi, kolona se sirila i izgurala ostatak
+   preko desne ivice.
+
+   Resenje ima dva dela: dozvoliti skupljanje (min-width: 0) i na uskom
+   ekranu preci sa tri kolone na jednu, gde svaka brojka dobija ceo red.
+   ========================================================================== */
+
+/* Prvi deo — vazi svuda. Bez ovoga nijedna mreza na sajtu ne moze da se
+   skupi ispod sadrzaja, pa se prelivanje moze vratiti na drugom mestu. */
+.grid > * { min-width: 0; }
+#tradicija dl > div { min-width: 0; }
+
+/* Drugi deo — samo uski ekrani. */
+@media (max-width: 860px) {
+  #tradicija dl {
+    /* Jedna kolona: svaka brojka dobija ceo red i ima gde da stane. */
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+  }
+
+  /* Naziv levo, vrednost desno — kratko i pregledno, bez visokog stuba
+     koji bi naterao posetioca na dodatno skrolovanje. */
+  #tradicija dl > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem 0;
+    border-bottom: 1px solid rgba(195, 203, 199, .1);
+  }
+  #tradicija dl > div:last-child { border-bottom: 0; }
+
+  #tradicija dt {
+    margin: 0;
+    flex: 0 1 auto;
+    font-size: 10px;
+    letter-spacing: .1em;
+  }
+
+  #tradicija dd {
+    margin: 0;
+    flex: 0 1 auto;
+    /* Velicina prati sirinu ekrana, sa gornjom i donjom granicom. */
+    font-size: clamp(1.25rem, 6.5vw, 1.75rem);
+    line-height: 1.05;
+    text-align: right;
+    /* Ako i ovako nesto bude predugacko, lomi se umesto da gura stranicu. */
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+  }
+}
+
+/* Vrlo uski ekrani (stari telefoni, 320px). */
+@media (max-width: 360px) {
+  #tradicija dt { font-size: 9px; letter-spacing: .06em; }
+  #tradicija dd { font-size: clamp(1.1rem, 6vw, 1.4rem); }
+}
