@@ -35,6 +35,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /* GSAP loads as a classic script tag, so it lives on window. */
@@ -457,11 +458,29 @@ const Fence = {
   load(onProgress) {
     return new Promise((resolve) => {
       const loader = new GLTFLoader();
+
+      /* ------------------------------------------------------------------
+         DRACO DEKODER
+
+         Draco je Guglov format za pakovanje 3D geometrije — smanjuje fajl
+         za 70–90% bez vidljive razlike. Ali kompresovan model je nečitljiv
+         bez dekodera, pa ga kačimo ovde.
+
+         Dekoder se povlači sa Guglovog CDN-a i to SAMO ako je model zaista
+         kompresovan. Ako nije, ovaj red ne košta ništa — nijedan bajt se
+         ne preuzima. Zato ga držimo uključenog u svakom slučaju.
+         ------------------------------------------------------------------ */
+      const draco = new DRACOLoader();
+      draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/libs/draco/');
+      draco.setDecoderConfig({ type: 'js' });   // WASM je brži, ali 'js' radi svuda
+      loader.setDRACOLoader(draco);
+
       loader.load(
         CONFIG.modelPath,
         (gltf) => {
           DIAG.model = true;
           this.template = this._normalise(gltf.scene);
+          draco.dispose();          // dekoder je jednokratan — oslobodi memoriju
           resolve(this.template);
         },
         (evt) => { if (evt.total) onProgress(evt.loaded / evt.total); },
