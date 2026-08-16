@@ -815,9 +815,22 @@ const WireMorph = {
     const target = new Float32Array(N * 3);   // points ON the coil
     const rand   = new Float32Array(N);
 
-    const W = CONFIG.panel.width;
-    const H = CONFIG.panel.height;
-    const baseY = CONFIG.panel.centerY - H / 2;
+    /* ------------------------------------------------------------------
+       MERE OBLAKA ČESTICA
+
+       Ranije su bile fiksne (4.2 x 1.7 iz CONFIG-a). Kada je model
+       zamenjen klijentovim GLB-om drugih dimenzija, oblak se pravio na
+       pogrešnom mestu i u pogrešnoj veličini — na ekranu je ostajala
+       samo tanka mrlja. Sada se, kao i trava, izvodi iz STVARNIH mera
+       učitanog modela, pa čestice uvek nastaju tačno na mreži.
+       ------------------------------------------------------------------ */
+    const b = Fence.bounds;
+    const t = CONFIG.trava;
+    const W = b ? b.size.x * t.sirina : CONFIG.panel.width;
+    const H = b ? b.size.y * t.visina : CONFIG.panel.height;
+    const centarY = b ? b.center.y + b.size.y * t.pomakY : CONFIG.panel.centerY;
+    const centarX = b ? b.center.x : 0;
+    const baseY = centarY - H / 2;
     const VERT = 22, HORZ = 10;
 
     for (let i = 0; i < N; i++) {
@@ -826,11 +839,11 @@ const WireMorph = {
       /* START: distributed along the wire lines of the panel */
       if (i % 2 === 0) {                                  // vertical wire
         const col = Math.floor(Math.random() * VERT) / (VERT - 1);
-        start[i3]     = -W / 2 + col * W;
+        start[i3]     = centarX - W / 2 + col * W;
         start[i3 + 1] = baseY + Math.random() * H;
       } else {                                            // horizontal wire
         const row = Math.floor(Math.random() * HORZ) / (HORZ - 1);
-        start[i3]     = -W / 2 + Math.random() * W;
+        start[i3]     = centarX - W / 2 + Math.random() * W;
         start[i3 + 1] = baseY + row * H;
       }
       start[i3 + 2] = (Math.random() - 0.5) * 0.03;       // slight weave depth
@@ -838,9 +851,12 @@ const WireMorph = {
       /* TARGET: a spiral coil on its side, like a roll of mesh */
       const u = i / N;
       const ang = u * Math.PI * 2 * 6;                    // 6 turns
-      const r = 0.30 + (ang / (Math.PI * 2)) * 0.085;     // opening spiral
-      target[i3]     = (Math.random() - 0.5) * 2.4;       // width of the roll
-      target[i3 + 1] = 0.78 + Math.sin(ang) * r;
+      /* Rolna je srazmerna ogradi: prečnik oko trećine visine panela,
+         dužina oko 55% širine. Tako izgleda kao rolna koja bi zaista
+         mogla da se odmota u tu ogradu. */
+      const r = H * 0.18 + (ang / (Math.PI * 2)) * (H * 0.05);
+      target[i3]     = centarX + (Math.random() - 0.5) * W * 0.55;
+      target[i3 + 1] = centarY - H * 0.12 + Math.sin(ang) * r;
       target[i3 + 2] = Math.cos(ang) * r;
 
       rand[i] = Math.random();
@@ -852,7 +868,7 @@ const WireMorph = {
     geo.setAttribute('aRandom',  new THREE.BufferAttribute(rand, 1));
     /* The cloud swings well outside its rest bounds mid-swirl, so give it
        a generous manual sphere rather than letting three cull it early. */
-    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 6);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(centarX, centarY, 0), Math.max(W, H) * 2.5);
 
     this.material = new THREE.ShaderMaterial({
       transparent: true,
@@ -861,7 +877,7 @@ const WireMorph = {
       uniforms: {
         uProgress: { value: 0 },
         uTime:     { value: 0 },
-        uSize:     { value: Quality.isLow ? 20.0 : 26.0 },
+        uSize:     { value: (Quality.isLow ? 20.0 : 26.0) * Math.max(1, H / 1.7) },
         uDpr:      { value: Quality.pixelRatio },
         uColorA:   { value: new THREE.Color(CONFIG.colors.steel) },
         uColorB:   { value: new THREE.Color(CONFIG.colors.spark) }
@@ -1162,34 +1178,54 @@ const Choreo = {
       }, '<');   // '<' = start together with the previous tween
   },
 
-  _cameraTimeline() {
+  /* ------------------------------------------------------------------
+     KRETANJE KAMERE
+
+     Ranije je jedna vremenska linija bila razvučena preko UKUPNE dužine
+     stranice, sa unapred izračunatim srazmerama (200/200/150/150 vh).
+     Čim je između sekcija dodat novi odeljak ("Naši radovi"), ukupna
+     dužina se produžila, srazmere su ostale stare i sve posle trećeg
+     ekrana se pomerilo — kamera je stizala u pogrešnom trenutku.
+
+     Sada svaka sekcija vodi ISKLJUČIVO svoj deo puta: prelaz se odvija u
+     prvih 55% njene sopstvene dužine, a ostatak kamera mirno stoji dok
+     posetilac čita. Nijedna sekcija ne zna ni za jednu drugu, pa se mogu
+     dodavati i uklanjati odeljci bez ikakvog preračunavanja.
+     ------------------------------------------------------------------ */
+  _prelaz(triggerSel, odKey, odSoba, doKey, doSoba, start, end) {
+    const od = CONFIG.cam[odKey], u = CONFIG.cam[doKey];
+    const odY = Rooms.y(odSoba), uY = Rooms.y(doSoba);
+
     const tl = gsap.timeline({
       scrollTrigger: {
-        trigger: '#scroll-content',
-        start: 'top top',
-        end: 'bottom bottom',
-        /* scrub:1 adds a second of catch-up smoothing and acts as a
-           natural rate limiter — the camera cannot update more often than
-           the GSAP ticker no matter how fast the wheel spins. */
+        trigger: triggerSel,
+        start, end,
         scrub: prefersReducedMotion ? true : 1,
         invalidateOnRefresh: true
       }
     });
 
-    /* SCREEN 1 — straight through the mesh */
-    this._to(tl, 'heroEnd', 0, 2, 'power1.inOut');
+    /* immediateRender: false je obavezno — bez njega bi se sve četiri
+       putanje primenile odjednom pri učitavanju i poništile jedna drugu. */
+    tl.fromTo(Stage.camera.position,
+      { x: od.pos[0], y: od.pos[1] + odY, z: od.pos[2] },
+      { x: u.pos[0], y: u.pos[1] + uY, z: u.pos[2],
+        ease: 'power2.inOut', immediateRender: false }, 0);
 
-    /* -> SCREEN 2 (arrive early, hold while the visitor reads) */
-    this._to(tl, 'story', 1, 1.2, 'power2.inOut');
-    tl.to({}, { duration: 0.8 });
+    tl.fromTo(Stage.camTarget,
+      { x: od.look[0], y: od.look[1] + odY, z: od.look[2] },
+      { x: u.look[0], y: u.look[1] + uY, z: u.look[2],
+        ease: 'power2.inOut', immediateRender: false }, 0);
+  },
 
-    /* -> SCREEN 3 */
-    this._to(tl, 'program', 2, 0.8, 'power2.inOut');
-    tl.to({}, { duration: 0.7 });
+  _cameraTimeline() {
+    /* Prvi ekran: prolazak kroz mrežu traje celu svoju sekciju. */
+    this._prelaz('#hero', 'heroStart', 0, 'heroEnd', 0, 'top top', 'bottom bottom');
 
-    /* -> SCREEN 4 */
-    this._to(tl, 'contact', 3, 0.8, 'power2.inOut');
-    tl.to({}, { duration: 0.7 });
+    /* Ostali: prelaz u prvih 55% sekcije, pa mirovanje dok se čita. */
+    this._prelaz('#tradicija', 'heroEnd', 0, 'story',   1, 'top top', '55% top');
+    this._prelaz('#program',   'story',   1, 'program', 2, 'top top', '55% top');
+    this._prelaz('#kontakt',   'program', 2, 'contact', 3, 'top top', '55% top');
   },
 
   /* Show exactly one room, and light the matching rail label. */
@@ -1356,7 +1392,7 @@ const Navigacija = {
     const jeEkran = el.classList.contains('screen');
     const meta = (el.id === 'hero' || !jeEkran)
       ? Math.max(0, el.offsetTop - 80)
-      : el.offsetTop + el.offsetHeight * 0.58;
+      : el.offsetTop + el.offsetHeight * 0.60;
 
     const granica = document.documentElement.scrollHeight - window.innerHeight;
     const kraj = Math.min(meta, granica);
