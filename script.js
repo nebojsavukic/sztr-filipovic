@@ -64,9 +64,35 @@ const CONFIG = {
      another's frustum, small enough to keep float precision comfortable. */
   roomGap: 40,
 
-  /* Reference dimensions of the fence panel. The grass plane is derived
-     from these so the two can never drift apart again. */
+  /* Reference dimensions of the fence panel. */
   panel: { width: 4.2, height: 1.7, centerY: 1.0 },
+
+  /* ======================================================================
+     PODEŠAVANJE PVC TRAVE  —  JEDINO MESTO KOJE SE MENJA
+
+     Ceo model je jedan objekat, pa kod ne može sam da razazna gde se
+     završava panel a gde počinju stubovi. Meri celu ogradu, sa pločama u
+     podnožju. Zato ova četiri broja podešavamo ručno.
+
+     Brojevi su UDEO u ukupnoj veličini modela: 1.0 = cela ograda.
+
+       sirina   manji broj = uža trava      (ako viri levo/desno)
+       visina   manji broj = niža trava     (ako viri gore/dole)
+       pomakY   veći broj = trava naviše    (ako fali u gornjem delu)
+       pomakZ   uvek negativan = IZA panela (da se žica vidi preko trave)
+
+     Menjajte po 0.02 i osvežite sa Ctrl+F5. Ne može se pokvariti.
+     ====================================================================== */
+  trava: {
+    /* Izmereno sa slika ekrana: panel je odnosa oko 1.45:1, a mreža
+       zauzima oko 80% širine i 82% visine celog modela (ostalo su stubovi
+       i ploče u podnožju). Snimak je izvezen u 3:2, pa se uklapa bez
+       primetnog odsecanja. */
+    sirina: 0.80,
+    visina: 0.82,
+    pomakY: 0.05,
+    pomakZ: -0.02
+  },
 
   /* Camera keyframes, LOCAL to each room (the room's Y offset is added). */
   cam: {
@@ -104,7 +130,21 @@ const CONTACT = {
   street:   'Borivoja Agatonovića bb',
   city:     '34000 Kragujevac',
   mapQuery: 'Borivoja Agatonovića bb, 34000 Kragujevac, Srbija',
-  founded:  2003
+  founded:  2003,
+
+  /* ======================================================================
+     SERVIS ZA SLANJE FORME (Formspree)
+
+     Prazno = forma otvara program za poštu (stari način, ne radi svuda).
+     Popunjeno = upit stiže pravo na vaš mejl, bez ijednog programa.
+
+     Kako se dobija:
+       1. formspree.io -> Sign up (besplatno, 50 poruka mesečno)
+       2. New form -> unesite zorafilipovic123@gmail.com
+       3. Dobijete adresu oblika https://formspree.io/f/xxxxxxxx
+       4. Nalepite je između navodnika ispod
+     ====================================================================== */
+  formEndpoint: ''
 };
 
 /* Screen 3 copy. Written for a homeowner, not a site engineer: every line
@@ -455,6 +495,11 @@ const Fence = {
   template: null,
   usedFallback: false,
 
+  /* Stvarne mere modela posle normalizacije. Popunjavaju se pri učitavanju
+     i koriste ih drugi moduli (trava) umesto pretpostavljenih brojeva iz
+     CONFIG-a. Klijentov GLB ne mora imati mere koje smo mi zamislili. */
+  bounds: null,
+
   load(onProgress) {
     return new Promise((resolve) => {
       const loader = new GLTFLoader();
@@ -511,6 +556,16 @@ const Fence = {
     root.position.sub(centre);
     root.position.y += size.y / 2;
     group.scale.setScalar(scale);
+    group.updateMatrixWorld(true);
+
+    /* Izmeri model TEK POSLE skaliranja i centriranja. */
+    const finalBox = new THREE.Box3().setFromObject(group);
+    this.bounds = {
+      min: finalBox.min.clone(),
+      max: finalBox.max.clone(),
+      size: finalBox.getSize(new THREE.Vector3()),
+      center: finalBox.getCenter(new THREE.Vector3())
+    };
 
     root.traverse((child) => {
       if (!child.isMesh) return;
@@ -544,6 +599,15 @@ const Fence = {
     const group = new THREE.Group();
     const { width, height, centerY } = CONFIG.panel;
 
+    /* Rezervna ograda ima mere iz CONFIG-a, pa ih odmah upisujemo kao
+       stvarne — da se trava ponaša isto bez obzira koji model se koristi. */
+    this.bounds = {
+      min: new THREE.Vector3(-width / 2, 0, -0.05),
+      max: new THREE.Vector3(width / 2, centerY + height / 2, 0.05),
+      size: new THREE.Vector3(width, centerY + height / 2, 0.1),
+      center: new THREE.Vector3(0, centerY, 0)
+    };
+
     const steel = new THREE.MeshStandardMaterial({
       color: CONFIG.colors.coat, metalness: 0.9, roughness: 0.35, envMapIntensity: 1.2
     });
@@ -561,25 +625,42 @@ const Fence = {
       side: THREE.DoubleSide
     });
 
-    /* Posts as a single InstancedMesh: 4 posts, 1 draw call. */
+    /* ------------------------------------------------------------------
+       RASPORED STUBOVA I PANELA
+
+       Ranije su stubovi i paneli računati po različitim formulama, pa su
+       se paneli levo preklapali, a desno nisu stizali do poslednjeg stuba
+       — ograda je izgledala prekinuto.
+
+       Sada oba proizlaze iz iste podele: ograda se deli na POLJA, stubovi
+       stoje na granicama polja, paneli tačno ispunjavaju polja. Ne mogu
+       više da se raziđu ni pri kakvoj promeni širine.
+       ------------------------------------------------------------------ */
+    const bays = 3;                    // broj polja između stubova
+    const bayWidth = width / bays;     // širina jednog polja
+
+    /* Stubovi na granicama polja: za 3 polja treba 4 stuba. */
     const postGeo = new THREE.BoxGeometry(0.09, 2.0, 0.09);
-    const posts = new THREE.InstancedMesh(postGeo, steel, 4);
+    const posts = new THREE.InstancedMesh(postGeo, steel, bays + 1);
     const m4 = new THREE.Matrix4();
-    for (let i = 0; i < 4; i++) {
-      m4.setPosition(-(width / 2) - 0.05 + i * (width / 3), 1.0, 0);
+    for (let i = 0; i <= bays; i++) {
+      m4.setPosition(-(width / 2) + i * bayWidth, 1.0, 0);
       posts.setMatrixAt(i, m4);
     }
     posts.instanceMatrix.needsUpdate = true;
     group.add(posts);
 
-    /* Panels: 3 planes, alpha-cut into a wire grid. */
-    const panelGeo = new THREE.PlaneGeometry(width / 2, height);
-    for (let i = 0; i < 3; i++) {
+    /* Paneli u sredini svakog polja, tačno širine polja. */
+    const panelGeo = new THREE.PlaneGeometry(bayWidth, height);
+    for (let i = 0; i < bays; i++) {
       const panel = new THREE.Mesh(panelGeo, panelMat);
-      panel.position.set(-(width / 2) + i * (width / 3) + 0.0, centerY, 0);
+      panel.position.set(-(width / 2) + bayWidth * (i + 0.5), centerY, 0);
       panel.name = 'panel';
       group.add(panel);
     }
+
+    /* Mreža se ponavlja po širini polja, da oka ostanu kvadratna. */
+    panelMat.alphaMap.repeat.set(1, 1);
 
     return group;
   },
@@ -886,9 +967,31 @@ const GrassVideo = {
   fallbackTex: null,
   isVideoReady: false,
 
-  /* Derived from the panel so the two can never drift apart again. */
-  get size() {
-    return { w: CONFIG.panel.width - 0.05, h: CONFIG.panel.height - 0.05 };
+  /* ------------------------------------------------------------------
+     MERE I POLOŽAJ TRAVE
+
+     Ranije su bile vezane za pretpostavljene brojeve iz CONFIG-a. Ako
+     klijentov model ima druge mere, trava je štrčala ili nije pokrivala
+     okvir. Sada se izvode iz STVARNIH mera učitanog modela.
+     ------------------------------------------------------------------ */
+  get placement() {
+    const b = Fence.bounds;
+    if (!b) {
+      return { w: CONFIG.panel.width * CONFIG.trava.sirina,
+               h: CONFIG.panel.height * CONFIG.trava.visina,
+               x: 0, y: CONFIG.panel.centerY, z: -0.03 };
+    }
+    const t = CONFIG.trava;
+    return {
+      w: b.size.x * t.sirina,
+      h: b.size.y * t.visina,
+      x: b.center.x,
+      y: b.center.y + b.size.y * t.pomakY,
+      /* IZA panela, ne ispred. To je bila glavna greška: trava na +z je
+         zaklanjala mrežu. PVC trava se u stvarnosti provlači KROZ žicu,
+         pa žica mora ostati vidljiva ispred nje. */
+      z: b.min.z + b.size.z * t.pomakZ
+    };
   },
 
   build() {
@@ -914,16 +1017,16 @@ const GrassVideo = {
       this.isVideoReady = true;
       mat.map = this.texture;
       mat.needsUpdate = true;
+      this._uklopiVideo();
     }, { once: true });
 
     this.video.addEventListener('error', () => {
       console.warn('[SZTR] Higgsfield video loop nije pronađen — koristi se rezervna tekstura.');
     }, { once: true });
 
-    /* 4.15 x 1.65, seated inside the frame at z = +0.01 */
-    const { w, h } = this.size;
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-    this.mesh.position.set(0, CONFIG.panel.centerY, 0.01);
+    const p = this.placement;
+    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), mat);
+    this.mesh.position.set(p.x, p.y, p.z);
     this.mesh.visible = false;
     Rooms.program.add(this.mesh);
 
@@ -933,9 +1036,44 @@ const GrassVideo = {
     });
   },
 
+  /* ------------------------------------------------------------------
+     UKLAPANJE VIDEA U OKVIR
+
+     Snimak i panel skoro nikad nemaju isti odnos stranica. Bez ovoga bi
+     se trava razvukla — vlati bi bile ili spljoštene ili izdužene, što
+     se odmah primeti jer oko zna kako trava izgleda.
+
+     Rešenje radi kao "popuni okvir": kraća strana se poklopi sa okvirom,
+     višak duže strane se odseče, a slika se ostavi centrirana. Ništa se
+     ne izobličava i ne ostaju prazne ivice — bez obzira na to u kojoj je
+     rezoluciji snimak izvezen.
+     ------------------------------------------------------------------ */
+  _uklopiVideo() {
+    const v = this.video;
+    if (!v || !v.videoWidth || !this.mesh) return;
+
+    const odnosVidea = v.videoWidth / v.videoHeight;
+    const p = this.placement;
+    const odnosOkvira = p.w / p.h;
+    const t = this.texture;
+
+    t.center.set(0.5, 0.5);
+    if (odnosVidea > odnosOkvira) {
+      t.repeat.set(odnosOkvira / odnosVidea, 1);   // snimak je širi — seci bočno
+    } else {
+      t.repeat.set(1, odnosVidea / odnosOkvira);   // snimak je viši — seci gore/dole
+    }
+    t.offset.set((1 - t.repeat.x) / 2, (1 - t.repeat.y) / 2);
+    t.needsUpdate = true;
+
+    console.info('[SZTR] Trava uklopljena — snimak ' + v.videoWidth + 'x' + v.videoHeight +
+                 ', okvir ' + odnosOkvira.toFixed(2) + ':1');
+  },
+
   show() {
     gsap.killTweensOf([this.mesh.scale, this.mesh.material]);
     this.mesh.visible = true;
+    if (this.isVideoReady) this._uklopiVideo();
     this.mesh.material.opacity = 0;
 
     /* Grows from the bottom edge up, as if being threaded into the mesh. */
@@ -1140,11 +1278,59 @@ const Choreo = {
 /* ==========================================================================
    10. UI — mode switcher, form, map
    ========================================================================== */
+const Dokazi = {
+  /* ------------------------------------------------------------------
+     Prikazuje odeljke "Naši radovi" i "Šta kažu kupci" SAMO ako su
+     zaista popunjeni. Fotografija koja se ne učita se uklanja; ako
+     nijedna ne ostane, ceo blok se ne prikazuje. Recenzija koja još
+     nosi tekst UPISATI se ne prikazuje.
+
+     Razlog: prazan okvir ili natpis "UPISATI RECENZIJU" na živom sajtu
+     šteti više nego da odeljka uopšte nema.
+     ------------------------------------------------------------------ */
+  init() {
+    this._galerija();
+    this._recenzije();
+  },
+
+  _galerija() {
+    const blok = document.getElementById('galerija-blok');
+    if (!blok) return;
+    const slike = [...blok.querySelectorAll('img')];
+    let preostalo = slike.length;
+
+    const proveri = () => {
+      if (blok.querySelectorAll('figure').length > 0) blok.hidden = false;
+    };
+
+    slike.forEach((img) => {
+      const pao = () => {
+        img.closest('figure')?.remove();
+        if (--preostalo <= 0 && blok.querySelectorAll('figure').length === 0) return;
+        proveri();
+      };
+      if (img.complete) { img.naturalWidth ? proveri() : pao(); }
+      else { img.addEventListener('load', proveri, { once: true });
+             img.addEventListener('error', pao, { once: true }); }
+    });
+  },
+
+  _recenzije() {
+    const blok = document.getElementById('recenzije-blok');
+    if (!blok) return;
+    blok.querySelectorAll('[data-prazno]').forEach((el) => {
+      if (/UPISATI/i.test(el.textContent)) el.remove();
+    });
+    if (blok.querySelectorAll('blockquote').length > 0) blok.hidden = false;
+  }
+};
+
 const UI = {
   init() {
     this._modes();
     this._form();
     this._map();
+    Dokazi.init();
   },
 
   /* ---- Screen 3 material switcher ---- */
@@ -1238,13 +1424,44 @@ const UI = {
         'Napomena: ' + (data.get('note') || '—')
       ].join('\n');
 
-      window.location.href =
-        'mailto:' + CONTACT.email + '?subject=' +
-        encodeURIComponent('Upit za ponudu — ' + data.get('name')) +
-        '&body=' + encodeURIComponent(body);
+      /* Ako servis nije podešen, vraćamo se na stari način. */
+      if (!CONTACT.formEndpoint) {
+        window.location.href =
+          'mailto:' + CONTACT.email + '?subject=' +
+          encodeURIComponent('Upit za ponudu — ' + data.get('name')) +
+          '&body=' + encodeURIComponent(body);
+        status.style.color = '#FF6A1F';
+        status.textContent = 'Otvaramo vaš program za poštu. Javljamo se u roku od 24 sata.';
+        return;
+      }
 
-      status.style.color = '#FF6A1F';
-      status.textContent = 'Otvaramo vaš program za poštu. Javljamo se u roku od 24 sata.';
+      const dugme = form.querySelector('button[type="submit"]');
+      dugme.disabled = true;
+      dugme.textContent = 'Šaljemo...';
+      status.style.color = '#A3ADA8';
+      status.textContent = '';
+
+      fetch(CONTACT.formEndpoint, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: data
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          form.reset();
+          status.style.color = '#7FD17F';
+          status.textContent = 'Upit je poslat. Javljamo se u roku od 24 sata.';
+          dugme.textContent = 'Poslato';
+        })
+        .catch(() => {
+          /* Mreža ili servis su otkazali — nikad ne ostavljamo čoveka bez
+             načina da nas dobije. Nudimo telefon odmah. */
+          status.style.color = '#FF7A5C';
+          status.innerHTML = 'Slanje nije uspelo. Pozovite nas na ' +
+            '<a href="tel:' + CONTACT.phoneTel + '" style="color:#FF6A1F">' + CONTACT.phone + '</a>.';
+          dugme.disabled = false;
+          dugme.textContent = 'Pokušajte ponovo';
+        });
     });
   },
 
@@ -1328,6 +1545,11 @@ async function boot() {
   Loader.finish();
   DIAG.ready = true;   // gasi watchdog iz bootstrap guard-a u index.html
 
+  console.info(
+    '[SZTR] Ograda izmerena — širina: ' + (Fence.bounds ? Fence.bounds.size.x.toFixed(2) : '?') +
+    ' visina: ' + (Fence.bounds ? Fence.bounds.size.y.toFixed(2) : '?') +
+    ' dubina: ' + (Fence.bounds ? Fence.bounds.size.z.toFixed(2) : '?')
+  );
   console.info(
     '[SZTR] Spremno · tier: ' + Quality.tier +
     ' · DPR: ' + Quality.pixelRatio.toFixed(2) +

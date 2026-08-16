@@ -419,3 +419,169 @@ header, #rail { z-index: 50; }
   background: rgba(9, 11, 10, 0.92);
   backdrop-filter: none;
 }
+
+/* ==========================================================================
+   ISPRAVKE POSLE PROVERE UŽIVO NA GITHUB PAGES
+   Tri greške uočene na pravom ekranu: naslovi naleću na fiksno zaglavlje,
+   veličine slova bez gornje granice na širokim monitorima, i preslab
+   kontrast naslova preko 3D scene.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. PROSTOR ZA ZAGLAVLJE
+   Zaglavlje je fiksno i lebdi iznad sadržaja. Svaka sekcija mora da mu
+   ostavi mesta, inače tekst prolazi ispod logotipa i dugmadi.
+   -------------------------------------------------------------------------- */
+#hero > .sticky,
+#tradicija > .sticky,
+#program > .sticky,
+#kontakt > .sticky {
+  padding-top: 7rem;
+  padding-bottom: 4rem;
+}
+
+/* Blaga tamna traka iza zaglavlja — logo ostaje čitljiv i kada 3D scena
+   prolazi ispod njega. */
+header {
+  background: linear-gradient(to bottom,
+    rgba(11, 13, 12, 0.95) 0%,
+    rgba(11, 13, 12, 0.75) 60%,
+    rgba(11, 13, 12, 0) 100%);
+}
+
+/* --------------------------------------------------------------------------
+   2. GORNJA GRANICA ZA VELIČINU SLOVA
+   Veličina u procentima širine ekrana (vw) nema granicu — na monitoru od
+   27 inča naslov naraste preko celog ekrana i izgura ostatak sadržaja.
+   clamp() postavlja donju granicu, poželjnu vrednost i GORNJU granicu.
+   -------------------------------------------------------------------------- */
+#hero h1 {
+  font-size: clamp(2.4rem, 6.5vw, 5.25rem);
+  line-height: 0.92;
+}
+#hero h1 span { display: block; margin-top: 0.15em; }
+
+#tradicija h2 { font-size: clamp(2rem, 5vw, 3.75rem); line-height: 0.95; }
+#program h2   { font-size: clamp(1.75rem, 4vw, 3rem);  line-height: 1; }
+#kontakt h2   { font-size: clamp(1.6rem, 3.4vw, 2.75rem); line-height: 1.02; }
+
+/* --------------------------------------------------------------------------
+   3. KONTRAST NASLOVA
+   Naslovi su bili sivi preko tamne 3D scene. Sada su beli, sa jačim
+   zastorom iza teksta.
+   -------------------------------------------------------------------------- */
+#hero h1,
+#tradicija h2,
+#program h2 { color: #FFFFFF; }
+
+#hero h1 span { color: #DCE4E0; }
+
+.readable h1,
+.readable h2 { text-shadow: 0 2px 30px rgba(11, 13, 12, 0.95); }
+
+.readable::before {
+  background: radial-gradient(
+    ellipse at 35% 50%,
+    rgba(11, 13, 12, 0.97) 0%,
+    rgba(11, 13, 12, 0.88) 48%,
+    rgba(11, 13, 12, 0) 80%
+  );
+}
+#hero-copy::before {
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(11, 13, 12, 0.96) 0%,
+    rgba(11, 13, 12, 0.86) 50%,
+    rgba(11, 13, 12, 0) 82%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   4. EKRAN 3 — SADRŽAJ JE ISPADAO IZNAD VIDNOG POLJA
+   justify-content: space-between je gurao naslov naviše kada je sadržaj
+   viši od ekrana. Sada je centriran, sa razmakom, i sme da naraste.
+   -------------------------------------------------------------------------- */
+#program > .sticky {
+  height: auto;
+  min-height: 100svh;
+  justify-content: center;
+  gap: 2.5rem;
+}
+#kontakt > .sticky { height: auto; min-height: 100svh; }
+
+/* Sitno pomeranje teksta ulevo da ne pokriva ogradu na širokim ekranima */
+@media (min-width: 1280px) {
+  #program .readable, #tradicija .readable { max-width: 34rem; }
+}
+
+@media (max-width: 768px) {
+  #hero > .sticky,
+  #tradicija > .sticky,
+  #program > .sticky,
+  #kontakt > .sticky { padding-top: 5.5rem; padding-bottom: 3rem; }
+  #program > .sticky { gap: 1.5rem; }
+}
+
+/* ==========================================================================
+   RADOVI I RECENZIJE
+   Oba bloka stoje sa atributom hidden dok ih script.js ne otključa.
+   [hidden] mora imati display:none jer je element flex/grid kontejner —
+   inače bi ga sopstveni display nadjačao i prazan blok bi se video.
+   ========================================================================== */
+[hidden] { display: none !important; }
+
+.rad-kartica {
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(195, 203, 199, 0.16);
+  background: rgba(9, 11, 10, 0.85);
+}
+.rad-kartica img {
+  display: block;
+  width: 100%;
+  /* Fiksni odnos stranica: fotografije sa telefona stižu u raznim
+     dimenzijama, a mreža mora ostati poravnata. object-fit seče višak
+     umesto da razvlači sliku. */
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease-out-quint);
+}
+.rad-kartica:hover img { transform: scale(1.04); }
+.rad-kartica figcaption {
+  padding: 0.85rem 1rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--concrete);
+  border-top: 1px solid rgba(195, 203, 199, 0.12);
+}
+
+.recenzija {
+  margin: 0;
+  padding: 1.5rem;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(195, 203, 199, 0.16);
+  border-left: 3px solid var(--spark);
+  background: rgba(9, 11, 10, 0.85);
+}
+.recenzija p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--zinc);
+}
+.recenzija footer {
+  margin-top: 1rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--spark);
+}
+
+@media (max-width: 640px) {
+  .recenzija { padding: 1.15rem; }
+  .rad-kartica figcaption { padding: 0.7rem 0.85rem; font-size: 10px; }
+}

@@ -6,10 +6,18 @@
 <title>SZTR Filipović Kragujevac — Ograde, panelne ograde i kapije | Od 2003.</title>
 <meta name="description" content="SZTR Filipović, Kragujevac — proizvodnja i ugradnja panelnih ograda, pletene žice i PVC trave. Borivoja Agatonovića bb. Izlazak na teren i merenje besplatni. Radimo od 2003." />
 <meta name="theme-color" content="#0B0D0C" />
-<link rel="canonical" href="https://www.sztr-filipovic.rs/" />
+<link rel="canonical" href="https://nebojsavukic.github.io/sztr-filipovic/" />
+<link rel="sitemap" type="application/xml" href="./sitemap.xml" />
+
+<!-- Ikonica u kartici pretraživača. Ugrađena kao SVG u samu adresu —
+     nema dodatnog fajla i nema dodatnog zahteva ka serveru. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230B0D0C'/%3E%3Cg stroke='%23FF6A1F' stroke-width='2.5'%3E%3Cpath d='M8 6v20M16 6v20M24 6v20M4 12h24M4 20h24'/%3E%3C/g%3E%3C/svg%3E" />
 
 <!-- Open Graph — kako sajt izgleda kada se podeli na Facebooku/Viberu -->
 <meta property="og:type" content="website" />
+<meta property="og:url" content="https://nebojsavukic.github.io/sztr-filipovic/" />
+<meta property="og:image" content="https://nebojsavukic.github.io/sztr-filipovic/assets/og-slika.jpg" />
+<meta property="og:image:alt" content="Panelna ograda koju je izradio SZTR Filipović" />
 <meta property="og:locale" content="sr_RS" />
 <meta property="og:title" content="SZTR Filipović — Ograde od proizvodnje do ugradnje" />
 <meta property="og:description" content="Panelne ograde, pletena žica i PVC trava. Kragujevac, Borivoja Agatonovića bb. Radimo od 2003." />
@@ -275,12 +283,12 @@
             <dd class="mt-1 font-display text-3xl font-900 text-white">2003.</dd>
           </div>
           <div>
-            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Postavljenih ograda</dt>
-            <dd class="mt-1 font-display text-3xl font-900 text-white">1200+</dd>
+            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Radimo u</dt>
+            <dd class="mt-1 font-display text-3xl font-900 text-white">Šumadiji</dd>
           </div>
           <div>
-            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Garancija</dt>
-            <dd class="mt-1 font-display text-3xl font-900 text-white">10 god.</dd>
+            <dt class="font-spec text-[10px] uppercase tracking-[0.12em] text-concrete">Merenje</dt>
+            <dd class="mt-1 font-display text-3xl font-900 text-white">Besplatno</dd>
           </div>
         </dl>
       </div>
@@ -315,6 +323,61 @@
           <span class="mode-spec">Hlad i privatnost</span>
         </button>
       </div>
+    </div>
+  </section>
+
+
+  <!-- ==========================================================
+       RADOVI I RECENZIJE
+       Oba bloka se SAMA SAKRIVAJU dok nisu popunjena pravim
+       sadržajem (script.js, modul Dokazi). Tako nijedan
+       prazan okvir ni izmišljena recenzija ne mogu otići uživo.
+       ========================================================== -->
+  <section id="radovi" class="relative z-10 bg-void px-5 py-20 md:px-16 md:py-28">
+    <div class="mx-auto max-w-6xl">
+
+      <div id="galerija-blok" hidden>
+        <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-spark">Naši radovi</p>
+        <h2 class="mt-3 font-display text-4xl font-900 uppercase leading-none text-white md:text-5xl">
+          Ovo smo mi postavili
+        </h2>
+        <div class="mt-8 grid gap-4 sm:grid-cols-3">
+          <figure class="rad-kartica">
+            <img src="./assets/rad-1.jpg" alt="Panelna ograda koju je postavio SZTR Filipović" loading="lazy" decoding="async" />
+            <figcaption>Panelna ograda &middot; Kragujevac</figcaption>
+          </figure>
+          <figure class="rad-kartica">
+            <img src="./assets/rad-2.jpg" alt="Ograda od pletene žice koju je postavio SZTR Filipović" loading="lazy" decoding="async" />
+            <figcaption>Pletena žica &middot; Kragujevac</figcaption>
+          </figure>
+          <figure class="rad-kartica">
+            <img src="./assets/rad-3.jpg" alt="Kapija i ograda koju je izradio SZTR Filipović" loading="lazy" decoding="async" />
+            <figcaption>Kapija i ograda &middot; Kragujevac</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div id="recenzije-blok" class="mt-20" hidden>
+        <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-spark">Šta kažu kupci</p>
+        <h2 class="mt-3 font-display text-4xl font-900 uppercase leading-none text-white md:text-5xl">
+          Reč onih koji su nas zvali
+        </h2>
+        <div class="mt-8 grid gap-4 sm:grid-cols-3">
+          <blockquote class="recenzija" data-prazno>
+            <p>UPISATI RECENZIJU</p>
+            <footer>UPISATI IME</footer>
+          </blockquote>
+          <blockquote class="recenzija" data-prazno>
+            <p>UPISATI RECENZIJU</p>
+            <footer>UPISATI IME</footer>
+          </blockquote>
+          <blockquote class="recenzija" data-prazno>
+            <p>UPISATI RECENZIJU</p>
+            <footer>UPISATI IME</footer>
+          </blockquote>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -366,7 +429,7 @@
             <p class="font-spec text-[11px] uppercase tracking-[0.3em] text-concrete">Radije biste da pozovete?</p>
             <div class="mt-4 space-y-1">
               <a href="tel:+38134329833" class="contact-row">
-                <span class="font-spec text-[10px] uppercase tracking-[0.15em] text-concrete">Telefon · radnim danima 08–17h</span>
+                <span class="font-spec text-[10px] uppercase tracking-[0.15em] text-concrete">Telefon · pozovite nas</span>
                 <span class="contact-value font-display text-3xl font-900">034 329 833</span>
               </a>
               <a href="mailto:zorafilipovic123@gmail.com" class="contact-row">

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nebojsavukic.github.io/sztr-filipovic/sitemap.xml
