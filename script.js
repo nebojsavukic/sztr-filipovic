@@ -318,6 +318,21 @@ const Textures = {
 /* ==========================================================================
    4. STAGE — renderer, scene, camera, lights, loop, perf governor
    ========================================================================== */
+/* Three.js od r163 zahteva WebGL2. Stariji telefoni i racunari imaju samo
+   WebGL1 - tamo renderer puca pri stvaranju. Proveravamo unapred da bismo
+   umesto pada mirno iskljucili 3D i ostavili sajt upotrebljiv. */
+const imaWebGL2 = (() => {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (gl) {
+      const lose = gl.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();
+      return true;
+    }
+  } catch (e) {}
+  return false;
+})();
+
 const Stage = {
   renderer: null, scene: null, camera: null,
   dirLight: null, envTexture: null,
@@ -1192,14 +1207,28 @@ const Choreo = {
      posetilac čita. Nijedna sekcija ne zna ni za jednu drugu, pa se mogu
      dodavati i uklanjati odeljci bez ikakvog preračunavanja.
      ------------------------------------------------------------------ */
-  _prelaz(triggerSel, odKey, odSoba, doKey, doSoba, start, end) {
+  _prelaz(triggerSel, odKey, odSoba, doKey, doSoba, udeo) {
     const od = CONFIG.cam[odKey], u = CONFIG.cam[doKey];
     const odY = Rooms.y(odSoba), uY = Rooms.y(doSoba);
+    const el = document.querySelector(triggerSel);
+    if (!el) return;
 
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: triggerSel,
-        start, end,
+        start: 'top top',
+        /* ------------------------------------------------------------
+           Lepljiv sadrzaj visok jedan ekran ostaje prikovan samo onoliko
+           koliko je sekcija VISA od ekrana: sekcija od 150vh drzi ga
+           prikovanim tokom 50vh skrolovanja, ne 150vh.
+
+           Ranije je kamera dobijala 55% CELE sekcije (82vh), pa je jos
+           bila u letu kad sadrzaj krene da klizi - otud ograda uz gornju
+           ivicu i praznina ispod. Sada se meri iz stvarnog prikovanog
+           prozora, i to pri svakom osvezavanju, pa prati velicinu
+           prozora korisnika umesto da je pretpostavlja.
+           ------------------------------------------------------------ */
+        end: () => '+=' + Math.max(1, (el.offsetHeight - window.innerHeight) * udeo),
         scrub: prefersReducedMotion ? true : 1,
         invalidateOnRefresh: true
       }
@@ -1220,12 +1249,12 @@ const Choreo = {
 
   _cameraTimeline() {
     /* Prvi ekran: prolazak kroz mrežu traje celu svoju sekciju. */
-    this._prelaz('#hero', 'heroStart', 0, 'heroEnd', 0, 'top top', 'bottom bottom');
+    this._prelaz('#hero', 'heroStart', 0, 'heroEnd', 0, 1.0);
 
     /* Ostali: prelaz u prvih 55% sekcije, pa mirovanje dok se čita. */
-    this._prelaz('#tradicija', 'heroEnd', 0, 'story',   1, 'top top', '55% top');
-    this._prelaz('#program',   'story',   1, 'program', 2, 'top top', '55% top');
-    this._prelaz('#kontakt',   'program', 2, 'contact', 3, 'top top', '55% top');
+    this._prelaz('#tradicija', 'heroEnd', 0, 'story',   1, 0.6);
+    this._prelaz('#program',   'story',   1, 'program', 2, 0.6);
+    this._prelaz('#kontakt',   'program', 2, 'contact', 3, 0.6);
   },
 
   /* Show exactly one room, and light the matching rail label. */
@@ -1392,7 +1421,7 @@ const Navigacija = {
     const jeEkran = el.classList.contains('screen');
     const meta = (el.id === 'hero' || !jeEkran)
       ? Math.max(0, el.offsetTop - 80)
-      : el.offsetTop + el.offsetHeight * 0.60;
+      : el.offsetTop + Math.max(0, el.offsetHeight - window.innerHeight) * 0.75;
 
     const granica = document.documentElement.scrollHeight - window.innerHeight;
     const kraj = Math.min(meta, granica);
@@ -1430,17 +1459,20 @@ const UI = {
     const desc = document.getElementById('program-desc');
     const solidFence = Rooms.programFence;
     let current = 'panel';
+    const bez3D = !solidFence;   /* bez WebGL2 dugmad menjaju samo opis */
 
     const setMode = (mode) => {
       if (mode === current) return;
 
       /* Always tear the previous mode down first — never assume state. */
-      if (current === 'wire')  WireMorph.hide(solidFence);
-      if (current === 'grass') GrassVideo.hide();
+      if (!bez3D) {
+        if (current === 'wire')  WireMorph.hide(solidFence);
+        if (current === 'grass') GrassVideo.hide();
 
-      if (mode === 'wire')  WireMorph.show(solidFence);
-      if (mode === 'grass') GrassVideo.show();
-      if (mode === 'panel') solidFence.visible = true;
+        if (mode === 'wire')  WireMorph.show(solidFence);
+        if (mode === 'grass') GrassVideo.show();
+        if (mode === 'panel') solidFence.visible = true;
+      }
 
       current = mode;
 
@@ -1618,6 +1650,25 @@ const Loader = {
 };
 
 async function boot() {
+  /* --------------------------------------------------------------------
+     STARI UREDJAJI
+
+     Bez WebGL2 nema 3D sloja - ali sajt zbog toga NE sme da stane. Tekst,
+     telefon, adresa i forma su ono zbog cega kupac dolazi; 3D je ukras.
+     Canvas se uklanja, klasa 'bez-3d' vraca sekcije na normalnu visinu i
+     stranica se ponasa kao obican, brz sajt.
+     -------------------------------------------------------------------- */
+  if (!imaWebGL2) {
+    DIAG.ready = true;
+    const cv = document.getElementById('webgl');
+    if (cv) cv.remove();
+    document.documentElement.classList.add('bez-3d');
+    Loader.finish();
+    UI.init();
+    console.info('[SZTR] WebGL2 nije dostupan - sajt radi bez 3D sloja.');
+    return;
+  }
+
   Stage.init();
 
   await Fence.load((p) => Loader.set(p * 0.9));

@@ -53,28 +53,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@700;900&display=swap" rel="stylesheet">
 
-<!-- Tailwind (CDN) — fixed 2D UI layers only. The 3D layer never touches it. -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          void:     '#0B0D0C', // near-black, green cast
-          zinc2:    '#C3CBC7', // galvanized steel
-          ral6005:  '#114232', // coated panel green
-          spark:    '#FF6A1F', // accent
-          concrete: '#A3ADA8'  // secondary text — LIGHTENED for readability
-        },
-        fontFamily: {
-          display: ['"Saira Condensed"', 'Impact', 'sans-serif'],
-          body:    ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-          spec:    ['"IBM Plex Mono"', 'ui-monospace', 'monospace']
-        }
-      }
-    }
-  }
-</script>
+<!-- Stilovi: jedan obican CSS fajl. Bez Tailwind CDN-a, koji je u
+     pregledacu pokretao program da sastavi stilove - oko 400 KB i pola
+     sekunde procesora na starijem telefonu, pre nego sto se ista vidi. -->
 <link rel="stylesheet" href="style.css" />
 
 <!-- ============================================================
@@ -128,15 +109,20 @@
     return;
   }
 
-  // 2) WebGL isključen ili nepodržan.
+  // 2) Nema WebGL-a: 3D otpada, ali sajt NE staje.
+  //
+  //    Ranije se ovde prikazivala poruka preko celog ekrana. To je bila
+  //    greska: na starijem telefonu kupac bi umesto sasvim upotrebljivog
+  //    sajta dobio obavestenje o gresci i otisao. Telefon, adresa i forma
+  //    rade i bez 3D-a, pa ih ne smemo zaklanjati.
+  //
+  //    Zato samo obelezimo stranicu klasom 'bez-3d' - CSS na osnovu nje
+  //    vraca sekcije na normalnu visinu - i tiho nastavimo dalje.
   if (window.__SZTR_DIAG.webgl === false) {
-    document.addEventListener('DOMContentLoaded', function () {
-      panel('3D prikaz nije dostupan na ovom uređaju',
-        '<p>Pregledač je prijavio da WebGL nije podržan ili je isključen. ' +
-        'Sav tekst i kontakt forma rade normalno — nedostaje samo 3D animacija.</p>' +
-        '<p style="margin-top:12px">Pokušajte sa Chrome ili Firefox pregledačem, ' +
-        'ili uključite hardversko ubrzanje u podešavanjima.</p>');
-    });
+    document.documentElement.className += ' bez-3d';
+    window.__SZTR_DIAG.ready = true;
+    var l = document.getElementById('loader');
+    if (l && l.parentNode) l.parentNode.removeChild(l);
     return;
   }
 
@@ -183,6 +169,9 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
 
 <!-- Three.js via import map — no bundler, no build step -->
+<!-- Napomena: import mape rade od Safari 16.4 / Chrome 89 / Firefox 108.
+     Na starijim uredjajima 3D sloj izostaje, ali sajt radi normalno -
+     zastita nize to prepozna i vrati stranicu na obican prikaz. -->
 <script type="importmap">
 {
   "imports": {

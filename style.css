@@ -1,4 +1,147 @@
 /* ==========================================================================
+   POMOCNE KLASE — zamena za Tailwind CDN
+   ==========================================================================
+   Ranije je sajt sa CDN-a povlacio Tailwind, koji NIJE gotov CSS nego
+   program. On u pregledacu procita ceo HTML i tek onda sastavi stilove.
+   Na modernom racunaru se to ne primeti; na starijem telefonu to je oko
+   400 KB preuzimanja i pola sekunde zauzetog procesora pre nego sto se
+   ista prikaze. Uz to je i jos jedna tacka na kojoj sajt moze pasti.
+
+   Ovde je isto to napisano rucno — samo one klase koje sajt stvarno
+   koristi. Nema programa, nema cekanja, nema treceg servera.
+   ========================================================================== */
+
+/* ---- Raspored ---- */
+.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}
+.sticky{position:sticky}
+.inset-0{inset:0}.inset-x-0{left:0;right:0}
+.top-0{top:0}.top-1\/2{top:50%}.bottom-4{bottom:1rem}
+.left-5{left:1.25rem}.right-6{right:1.5rem}
+.z-10{z-index:10}.z-50{z-index:50}.z-\[100\]{z-index:100}
+.-translate-y-1\/2{transform:translateY(-50%)}
+
+.block{display:block}.inline-block{display:inline-block}
+.flex{display:flex}.grid{display:grid}.hidden{display:none}
+.flex-col{flex-direction:column}.flex-1{flex:1 1 0%}
+.flex-wrap{flex-wrap:wrap}
+.items-center{align-items:center}.items-end{align-items:flex-end}
+.justify-center{justify-content:center}.justify-between{justify-content:space-between}
+.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}
+.space-y-1>*+*{margin-top:.25rem}
+.space-y-4>*+*{margin-top:1rem}
+.space-y-5>*+*{margin-top:1.25rem}
+
+.mt-1{margin-top:.25rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}
+.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}
+.mt-7{margin-top:1.75rem}.mt-8{margin-top:2rem}.mt-9{margin-top:2.25rem}
+.mt-20{margin-top:5rem}.mx-auto{margin-left:auto;margin-right:auto}
+
+.p-0{padding:0}.pt-6{padding-top:1.5rem}
+.px-5{padding-left:1.25rem;padding-right:1.25rem}
+.py-4{padding-top:1rem;padding-bottom:1rem}
+.py-5{padding-top:1.25rem;padding-bottom:1.25rem}
+.py-8{padding-top:2rem;padding-bottom:2rem}
+.py-20{padding-top:5rem;padding-bottom:5rem}
+.py-24{padding-top:6rem;padding-bottom:6rem}
+
+.w-0{width:0}.w-full{width:100%}.w-56{width:14rem}
+.h-full{height:100%}.h-\[3px\]{height:3px}
+.h-\[100svh\]{height:100vh;height:100svh}
+.min-h-\[100svh\]{min-height:100vh;min-height:100svh}
+.min-h-\[200px\]{min-height:200px}.min-h-\[5rem\]{min-height:5rem}
+.max-w-lg{max-width:32rem}.max-w-xl{max-width:36rem}
+.max-w-4xl{max-width:56rem}.max-w-6xl{max-width:72rem}
+
+.overflow-hidden{overflow:hidden}
+.pointer-events-none{pointer-events:none}
+.resize-none{resize:none}
+.break-all{word-break:break-all}
+.rounded-full{border-radius:9999px}
+.border-t{border-top-width:1px;border-top-style:solid}
+.border-white\/10{border-color:rgba(255,255,255,.1)}
+.border-white\/15{border-color:rgba(255,255,255,.15)}
+
+/* ---- Boje ---- */
+.bg-void{background-color:#0B0D0C}
+.bg-spark{background-color:#FF6A1F}
+.bg-white\/10{background-color:rgba(255,255,255,.1)}
+.text-white{color:#fff}
+.text-zinc2{color:#C3CBC7}
+.text-spark{color:#FF6A1F}
+.text-concrete{color:#A3ADA8}
+
+/* ---- Pismo ---- */
+.font-display{font-family:'Saira Condensed',Impact,sans-serif}
+.font-body{font-family:'IBM Plex Sans',system-ui,sans-serif}
+.font-spec{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.antialiased{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}
+.text-sm{font-size:.875rem}.text-base{font-size:1rem}.text-lg{font-size:1.125rem}
+.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.text-3xl{font-size:1.875rem}
+.text-4xl{font-size:2.25rem}
+.text-\[12vw\]{font-size:12vw}.text-\[13vw\]{font-size:13vw}.text-\[14vw\]{font-size:14vw}
+
+.leading-none{line-height:1}
+.leading-\[0\.86\]{line-height:.86}
+.leading-\[0\.9\]{line-height:.9}
+.leading-\[0\.95\]{line-height:.95}
+.leading-relaxed{line-height:1.625}
+
+.tracking-tight{letter-spacing:-.025em}
+.tracking-\[0\.12em\]{letter-spacing:.12em}
+.tracking-\[0\.15em\]{letter-spacing:.15em}
+.tracking-\[0\.16em\]{letter-spacing:.16em}
+.tracking-\[0\.18em\]{letter-spacing:.18em}
+.tracking-\[0\.3em\]{letter-spacing:.3em}
+
+.uppercase{text-transform:uppercase}
+.text-center{text-align:center}
+.tabular-nums{font-variant-numeric:tabular-nums}
+
+.transition-\[width\]{transition-property:width}
+.duration-200{transition-duration:.2s}
+.ease-out{transition-timing-function:cubic-bezier(0,0,.2,1)}
+
+/* ---- Od 640px (telefon polozeno / mali tablet) ---- */
+@media (min-width:640px){
+  .sm\:inline-block{display:inline-block}
+  .sm\:flex-row{flex-direction:row}
+  .sm\:flex-wrap{flex-wrap:wrap}
+  .sm\:gap-6{gap:1.5rem}
+  .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sm\:text-5xl{font-size:3rem}
+  .sm\:text-6xl{font-size:3.75rem}
+}
+
+/* ---- Od 768px (tablet) ---- */
+@media (min-width:768px){
+  .md\:hidden{display:none}
+  .md\:block{display:block}
+  .md\:px-10{padding-left:2.5rem;padding-right:2.5rem}
+  .md\:px-16{padding-left:4rem;padding-right:4rem}
+  .md\:py-5{padding-top:1.25rem;padding-bottom:1.25rem}
+  .md\:py-28{padding-top:7rem;padding-bottom:7rem}
+  .md\:text-xs{font-size:.75rem}
+  .md\:text-lg{font-size:1.125rem}
+  .md\:text-xl{font-size:1.25rem}
+  .md\:text-5xl{font-size:3rem}
+  .md\:text-6xl{font-size:3.75rem}
+  .md\:text-7xl{font-size:4.5rem}
+  .md\:text-\[8vw\]{font-size:8vw}
+}
+
+/* ---- Od 1024px (racunar) ---- */
+@media (min-width:1024px){
+  .lg\:block{display:block}
+  .lg\:grid-cols-\[1\.1fr_0\.9fr\]{grid-template-columns:1.1fr .9fr}
+}
+
+
+/* ==========================================================================
    SZTR FILIPOVIĆ — style.css  (FINAL)
    Tailwind (CDN) handles layout/spacing in the markup.
    This file owns tokens, the wire-grid signature, component states, motion.
@@ -637,3 +780,91 @@ header {
   }
   #program > .sticky { padding-top: 5rem; padding-bottom: 2.5rem; }
 }
+
+/* ==========================================================================
+   PODRSKA ZA STARIJE UREDJAJE
+   ==========================================================================
+   Sajt mora raditi na starim telefonima i racunarima. Sve ispod je rezerva
+   za osobine koje noviji pregledaci imaju, a stariji nemaju.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. svh -> vh
+
+   Jedinica svh ("mala visina prozora") postoji tek od Safari 15.4 i
+   Chrome 108. Stariji pregledac celu deklaraciju ODBACUJE - element tada
+   ostaje bez visine, naraste preko ekrana i lepljenje prestaje da radi.
+   To je tacno onaj kvar zbog kog je sadrzaj klizio naviše.
+
+   Zato prvo ide vh koji razume svako, pa svh odmah ispod. Moderni
+   pregledac uzme drugi red, stari ostane na prvom i sve i dalje radi.
+   -------------------------------------------------------------------------- */
+#hero > .sticky,
+#tradicija > .sticky,
+#program > .sticky,
+#kontakt > .sticky {
+  height: 100vh;
+  height: 100svh;
+}
+
+/* --------------------------------------------------------------------------
+   2. aspect-ratio -> stari nacin sa procentima
+
+   aspect-ratio radi od Safari 15. Bez njega bi fotografije radova stigle u
+   raznim velicinama i razbile mrezu. @supports not znaci: primeni SAMO ako
+   pregledac NE zna aspect-ratio.
+   -------------------------------------------------------------------------- */
+@supports not (aspect-ratio: 4 / 3) {
+  .rad-kartica a,
+  .rad-kartica {
+    position: relative;
+  }
+  .rad-kartica img {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+  }
+  .rad-kartica figure,
+  .rad-kartica > img { display: block; }
+  .rad-kartica::before {
+    content: '';
+    display: block;
+    padding-top: 75%;        /* 4:3 */
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. gap u flex rasporedu
+
+   flex-gap radi tek od Safari 14.1. Na starijem iPhone-u dugmad programa i
+   kontakt dugmad bi se slepila jedno uz drugo. Rezerva kroz margine.
+   -------------------------------------------------------------------------- */
+@supports not (gap: 1rem) {
+  #program [role="group"] > .mode-btn { margin: 0 0.75rem 0.75rem 0; }
+  .contact-row + .contact-row { margin-top: 0.5rem; }
+}
+
+/* --------------------------------------------------------------------------
+   4. BEZ 3D SLOJA
+
+   Klasa se postavlja kad uredjaj nema WebGL2 (Three.js ga zahteva od
+   verzije r163). Tada nema sta da se prikazuje iza teksta, pa visoke
+   sekcije nemaju svrhu - samo bi naterale kupca da skroluje kroz prazno.
+   Vracamo ih na normalnu visinu i sajt postaje obican, vrlo brz.
+   -------------------------------------------------------------------------- */
+.bez-3d .screen { height: auto !important; }
+.bez-3d .screen > .sticky {
+  position: static;
+  height: auto;
+  min-height: 0;
+  padding-top: 6rem;
+  padding-bottom: 4rem;
+  overflow: visible;
+}
+.bez-3d .scroll-hint { display: none; }
+.bez-3d .readable::before { display: none; }   /* nema 3D pozadine za zaklon */
+.bez-3d .grid-overlay { opacity: 0.35; }
+
+/* Bez 3D-a dugmad programa nemaju sta da pokazu, pa im dajemo boju
+   i cvrst okvir da i dalje izgledaju kao izbor proizvoda. */
+.bez-3d .mode-btn { background: rgba(17, 66, 50, 0.35); }
