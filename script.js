@@ -160,6 +160,33 @@ const MODE_COPY = {
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/* ==========================================================================
+   STABILNA VISINA PROZORA
+   --------------------------------------------------------------------------
+   Na telefonu se adresna traka skuplja i siri pri skrolovanju i menja
+   window.innerHeight za 10-15%. Granice putanje kamere racunaju se iz te
+   visine - ako se ona promeni usred skrolovanja, zapamcene granice postaju
+   pogresne i izmedju sekcija se otvori praznina.
+
+   Zato visinu merimo JEDNOM i osvezavamo je samo kada se promeni SIRINA
+   (okretanje telefona, promena velicine prozora). Adresna traka vise ne
+   dira racunicu.
+   ========================================================================== */
+const Prozor = {
+  visina: window.innerHeight,
+  sirina: window.innerWidth,
+  osvezi() {
+    if (window.innerWidth === this.sirina) return false;
+    this.sirina = window.innerWidth;
+    this.visina = window.innerHeight;
+    return true;
+  }
+};
+
+if (window.ScrollTrigger && ScrollTrigger.config) {
+  ScrollTrigger.config({ ignoreMobileResize: true });
+}
+
 
 /* ==========================================================================
    2. QUALITY — device tier
@@ -417,12 +444,22 @@ const Stage = {
        collapsing on scroll fires resize constantly, and reacting to it
        would rebuild the buffer several times per swipe. */
     let resizeTimer;
-    let lastW = window.innerWidth;
     window.addEventListener('resize', () => {
-      if (Quality.isPhone && window.innerWidth === lastW) return;
-      lastW = window.innerWidth;
+      /* Prozor.osvezi() vraca true samo kad se SIRINA stvarno promenila.
+         Promena visine od adresne trake se preskace: menjanje medjuspremnika
+         usred skrolovanja pravi trzanje i artefakte na slabijim uredjajima. */
+      if (!Prozor.osvezi()) return;
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => this._resize(), 150);
+    });
+
+    /* Okretanje telefona menja i sirinu, ali stize sa zakasnjenjem. */
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        Prozor.sirina = window.innerWidth;
+        Prozor.visina = window.innerHeight;
+        this._resize();
+      }, 350);
     });
 
     /* Pointer -> light goal. We only store the value here; the lerp runs
@@ -942,6 +979,26 @@ const WireMorph = {
     Rooms.program.add(this.points);
 
     Stage.onUpdate((dt) => {
+      /* ------------------------------------------------------------------
+         SIGURNOSNA MREZA PROTIV "BELE PRASINE"
+
+         show() i hide() pocinju sa killTweensOf. Ubijena animacija NIKAD ne
+         pozove onComplete - a bas u njemu se oblak gasio. Dovoljno je brzo
+         kliknuti Zica -> Panel -> Zica i oblak ostane trajno vidljiv,
+         zamrznut na pola pretvaranja. Sa sabirnim mesanjem (Additive) to na
+         ekranu izgleda kao bela prasina preko sadrzaja.
+
+         Ova provera se vrti svaki kadar i ne oslanja se ni na jedan povratni
+         poziv: ako oblak nije aktivan a napredak je pao na nulu, gasi ga i
+         vraca ogradu. Ne moze ostati zaglavljen ni pod kojim redosledom
+         klikova, koliko god brzo se kliktalo.
+         ------------------------------------------------------------------ */
+      if (!this._aktivan && this.points.visible &&
+          this.material.uniforms.uProgress.value <= 0.002) {
+        this.points.visible = false;
+        if (this._ograda) this._ograda.visible = true;
+      }
+
       if (!this.points.visible) return;
       this.material.uniforms.uTime.value += dt;
       /* Rolling coil. The rotation is scaled BY progress, so at progress 0
@@ -951,22 +1008,40 @@ const WireMorph = {
     });
   },
 
+  /* _aktivan je jedina istina o tome da li rezim TREBA da bude ukljucen.
+     Vidljivost se izvodi iz njega, ne iz povratnih poziva animacije. */
+  _aktivan: false,
+  _ograda: null,
+
   show(solidFence) {
+    this._aktivan = true;
+    this._ograda = solidFence;
     this.points.visible = true;
+    solidFence.visible = false;          /* odmah, ne u onStart */
+
     gsap.killTweensOf(this.progress);
     gsap.to(this.progress, {
-      v: 1, duration: 2.0, ease: 'power2.inOut',
-      onStart: () => { solidFence.visible = false; },
+      v: 1, duration: 2.0, ease: 'power2.inOut', overwrite: true,
       onUpdate: () => { this.material.uniforms.uProgress.value = this.progress.v; }
     });
   },
 
   hide(solidFence) {
+    this._aktivan = false;
+    this._ograda = solidFence;
+
+    const zavrsi = () => {
+      if (this._aktivan) return;          /* u medjuvremenu ponovo ukljucen */
+      this.points.visible = false;
+      solidFence.visible = true;
+    };
+
     gsap.killTweensOf(this.progress);
     gsap.to(this.progress, {
-      v: 0, duration: 1.5, ease: 'power2.inOut',
+      v: 0, duration: 1.5, ease: 'power2.inOut', overwrite: true,
       onUpdate: () => { this.material.uniforms.uProgress.value = this.progress.v; },
-      onComplete: () => { this.points.visible = false; solidFence.visible = true; }
+      onComplete: zavrsi,
+      onInterrupt: zavrsi                 /* i ubijena animacija cisti za sobom */
     });
   }
 };
@@ -1228,7 +1303,7 @@ const Choreo = {
            prozora, i to pri svakom osvezavanju, pa prati velicinu
            prozora korisnika umesto da je pretpostavlja.
            ------------------------------------------------------------ */
-        end: () => '+=' + Math.max(1, (el.offsetHeight - window.innerHeight) * udeo),
+        end: () => '+=' + Math.max(1, (el.offsetHeight - Prozor.visina) * udeo),
         scrub: prefersReducedMotion ? true : 1,
         invalidateOnRefresh: true
       }
@@ -1421,7 +1496,7 @@ const Navigacija = {
     const jeEkran = el.classList.contains('screen');
     const meta = (el.id === 'hero' || !jeEkran)
       ? Math.max(0, el.offsetTop - 80)
-      : el.offsetTop + Math.max(0, el.offsetHeight - window.innerHeight) * 0.75;
+      : el.offsetTop + Math.max(0, el.offsetHeight - Prozor.visina) * 0.75;
 
     const granica = document.documentElement.scrollHeight - window.innerHeight;
     const kraj = Math.min(meta, granica);
@@ -1484,6 +1559,15 @@ const UI = {
         b.classList.toggle('is-active', active);
         b.setAttribute('aria-pressed', String(active));
       });
+
+      /* Opis se menja, pa se teoretski moze promeniti visina sadrzaja. Kod
+         nas ne moze (sekcija je fiksne visine sa overflow:hidden), ali
+         osvezavanje je jeftino osiguranje. Dva uzastopna kadra cekanja su
+         obavezna: prvi pusta pregledac da primeni novi tekst, drugi da
+         izmeri gotov raspored. Merenje u istom kadru vraca stare brojeve. */
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (window.ScrollTrigger) ScrollTrigger.refresh();
+      }));
     };
 
     buttons.forEach((b) => {

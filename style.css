@@ -868,3 +868,54 @@ header {
 /* Bez 3D-a dugmad programa nemaju sta da pokazu, pa im dajemo boju
    i cvrst okvir da i dalje izgledaju kao izbor proizvoda. */
 .bez-3d .mode-btn { background: rgba(17, 66, 50, 0.35); }
+
+/* ==========================================================================
+   IZOLACIJA SLOJEVA I CANVASA
+   --------------------------------------------------------------------------
+   Cilj: 3D sloj ne sme ni pod kojim uslovom da "iscuri" preko sadrzaja, ni
+   dok se raspored menja, ni dok se prozor menja velicine.
+   ========================================================================== */
+
+/* Vodoravno prelivanje bilo gde na stranici tera pregledac da racuna sirinu
+   dokumenta iznova i pomera sve sto je fiksirano. Zatvaramo ga na korenu. */
+html, body { overflow-x: clip; }
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }     /* rezerva za starije pregledace */
+}
+
+#webgl {
+  /* Sopstveni sloj na grafickoj kartici. translateZ(0) je stara, siroko
+     podrzana varijanta; will-change radi na novijim. Oba zajedno pokrivaju
+     i stare uredjaje. */
+  -webkit-transform: translateZ(0);
+          transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+
+  /* Crtanje se zaustavlja na ivicama elementa. Ako se medjuspremnik i CSS
+     velicina na trenutak raziđu - a bas to se desava dok se adresna traka
+     skuplja - visak se odseca umesto da se razlije preko sadrzaja. */
+  contain: paint;
+  overflow: hidden;
+
+  /* Bez ovoga bi se 3D sloj video kroz providne kartice pri promeni velicine. */
+  isolation: isolate;
+}
+
+/* Sadrzaj dobija sopstveni kontekst slaganja, pa z-index unutar njega ne
+   moze da se meri sa canvasom. Bez ovoga jedan pogresan z-index u nekoj
+   kartici moze da je gurne ISPOD 3D sloja. */
+#scroll-content { isolation: isolate; }
+
+/* Sekcije ne prelivaju svoj okvir ni dok se raspored menja. */
+.screen { overflow: clip; }
+@supports not (overflow: clip) {
+  .screen { overflow: hidden; }
+}
+/* Izuzetak: lepljivi sadrzaj mora da sme da "viri" iz svog roditelja,
+   inace lepljenje prestaje da radi. */
+.screen > .sticky { overflow: hidden; }
+
+/* Kada 3D sloja nema, ova ogranicenja nemaju svrhu i samo bi secla sadrzaj. */
+.bez-3d .screen,
+.bez-3d .screen > .sticky { overflow: visible; }
