@@ -585,3 +585,55 @@ header {
   .recenzija { padding: 1.15rem; }
   .rad-kartica figcaption { padding: 0.7rem 0.85rem; font-size: 10px; }
 }
+
+/* ==========================================================================
+   ISPRAVKA: LEPLJIVE SEKCIJE SU KLIZILE
+
+   Ranije sam ovim sekcijama dao `height: auto; min-height: 100svh` da bi
+   sadržaj smeo da naraste. To je bila greška: lepljiv element VIŠI od
+   ekrana prestaje da se lepi za vrh i počinje da klizi sa stranicom.
+   Posledica — sadržaj i 3D scena bi iskliznuli naviše i bili presečeni
+   gornjom ivicom.
+
+   Ispravno je fiksirati visinu na tačno jedan ekran. Razmak odozgo ostaje
+   UNUTAR te visine jer je globalno postavljen box-sizing: border-box, pa
+   element ne naraste ni za piksel.
+   ========================================================================== */
+#program > .sticky,
+#kontakt > .sticky {
+  height: 100svh;
+  min-height: 0;
+  padding-top: 6rem;
+  padding-bottom: 3rem;
+  overflow: hidden;          /* nikad ne prelivaj preko svoje visine */
+}
+
+/* Treći ekran: sadržaj centriran, sa razmakom koji se skuplja po potrebi */
+#program > .sticky {
+  justify-content: center;
+  gap: clamp(1rem, 4vh, 2.5rem);
+}
+
+/* Četvrti ekran: forma je viša od ostalog sadržaja, pa joj dajemo
+   mogućnost da se sabije umesto da probije okvir. */
+#kontakt > .sticky > div { max-height: 100%; }
+#kontakt .panel-card { padding: 1.5rem; }
+
+/* --------------------------------------------------------------------------
+   MOBILNI: kontakt sekcija se ne lepi
+
+   Na telefonu je forma sa svim poljima viša od ekrana i nikakvo sabijanje
+   je ne bi uklopilo. Umesto da je sečemo, na malim ekranima isključujemo
+   lepljenje — sekcija se ponaša kao obična i uredno se skroluje.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  #kontakt { height: auto !important; }
+  #kontakt > .sticky {
+    position: static;
+    height: auto;
+    padding-top: 5rem;
+    padding-bottom: 4rem;
+    overflow: visible;
+  }
+  #program > .sticky { padding-top: 5rem; padding-bottom: 2.5rem; }
+}
