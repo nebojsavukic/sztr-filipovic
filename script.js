@@ -1325,12 +1325,67 @@ const Dokazi = {
   }
 };
 
+/* ==========================================================================
+   NAVIGACIJA — klik na meni
+   --------------------------------------------------------------------------
+   Kamera se kreće isključivo po skrolu. Običan skok preko #linka pomeri
+   stranicu trenutno, bez ijednog međukoraka, pa kamera ostane zaglavljena
+   između dve sobe i ekran je prazan dok korisnik ne mrdne točkić.
+
+   Zato klik na meni ne skače, nego VODI stranicu do cilja u malo više od
+   sekunde i pri svakom kadru javlja sistemu gde se nalazi. Kamera tako
+   dobija neprekidan pokret i doleti zajedno sa stranicom.
+
+   Cilj nije vrh sekcije nego 58% njene dužine — tu kamera po vremenskoj
+   liniji već stigne u sobu. Skok na sam vrh bi je zatekao na pola puta.
+   ========================================================================== */
+const Navigacija = {
+  init() {
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const cilj = document.querySelector(link.getAttribute('href'));
+        if (!cilj) return;
+        e.preventDefault();
+        this.vodi(cilj);
+      });
+    });
+  },
+
+  vodi(el) {
+    /* Prvi ekran je izuzetak: tamo se ide na sam vrh stranice. */
+    const jeEkran = el.classList.contains('screen');
+    const meta = (el.id === 'hero' || !jeEkran)
+      ? Math.max(0, el.offsetTop - 80)
+      : el.offsetTop + el.offsetHeight * 0.58;
+
+    const granica = document.documentElement.scrollHeight - window.innerHeight;
+    const kraj = Math.min(meta, granica);
+
+    const stanje = { y: window.scrollY };
+    gsap.killTweensOf(stanje);
+
+    gsap.to(stanje, {
+      y: kraj,
+      duration: prefersReducedMotion ? 0 : 1.15,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        window.scrollTo(0, stanje.y);
+        /* Ovo je ključni red: bez njega bi se stranica pomerila, a kamera
+           bi i dalje stajala. Javlja sistemu novi položaj svaki kadar. */
+        ScrollTrigger.update();
+      },
+      onComplete: () => ScrollTrigger.update()
+    });
+  }
+};
+
 const UI = {
   init() {
     this._modes();
     this._form();
     this._map();
     Dokazi.init();
+    Navigacija.init();
   },
 
   /* ---- Screen 3 material switcher ---- */
@@ -1543,7 +1598,17 @@ async function boot() {
 
   ScrollTrigger.refresh();
   Loader.finish();
-  DIAG.ready = true;   // gasi watchdog iz bootstrap guard-a u index.html
+  DIAG.ready = true;
+
+  /* Otvaranje sajta sa #adresom (npr. iz podeljenog linka): pretraživač
+     bi skočio pre nego što je scena spremna. Vraćamo na vrh i vodimo. */
+  if (location.hash) {
+    const cilj = document.querySelector(location.hash);
+    if (cilj) {
+      window.scrollTo(0, 0);
+      setTimeout(() => Navigacija.vodi(cilj), 400);
+    }
+  }   // gasi watchdog iz bootstrap guard-a u index.html
 
   console.info(
     '[SZTR] Ograda izmerena — širina: ' + (Fence.bounds ? Fence.bounds.size.x.toFixed(2) : '?') +
