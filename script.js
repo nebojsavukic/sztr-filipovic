@@ -1521,6 +1521,97 @@ const Dokazi = {
 };
 
 /* ==========================================================================
+   NAVIGACIJA — klik na meni
+   --------------------------------------------------------------------------
+   Kamera se krece iskljucivo po skrolu. Obican skok preko #linka pomeri
+   stranicu trenutno, bez ijednog medjukoraka, pa kamera ostane zaglavljena
+   izmedju dve sobe i 3D sloj je prazan dok posetilac ne mrdne prstom.
+
+   Zato klik na meni ne skace, nego VODI stranicu do cilja u malo vise od
+   sekunde i pri svakom kadru javlja sistemu gde se nalazi.
+   ========================================================================== */
+const Navigacija = {
+  init() {
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const cilj = document.querySelector(link.getAttribute('href'));
+        if (!cilj) return;
+        e.preventDefault();
+        this.vodi(cilj);
+      });
+    });
+  },
+
+  vodi(el) {
+    const jeEkran = el.classList.contains('screen');
+
+    /* Cilj je sredina prikovanog prozora: tu je kamera vec stigla, a
+       sadrzaj jos nije poceo da klizi. */
+    const prozor = Math.max(0, el.offsetHeight - Prozor.visina);
+    const meta = (el.id === 'hero' || !jeEkran)
+      ? Math.max(0, el.offsetTop - 80)
+      : el.offsetTop + prozor * 0.75;
+
+    const granica = document.documentElement.scrollHeight - Prozor.visina;
+    const kraj = Math.min(meta, Math.max(0, granica));
+
+    /* ------------------------------------------------------------------
+       ODMAH UKLJUCI PRAVU SOBU
+
+       Vidljivost soba inace prebacuje okidac vezan za sredinu ekrana. Pri
+       vodjenoj navigaciji taj okidac se javi tek negde na pola puta, pa bi
+       prvih pola sekunde 3D sloj bio prazan. Zato sobu ukljucujemo odmah,
+       pre nego sto putovanje uopste pocne.
+       ------------------------------------------------------------------ */
+    if (jeEkran && typeof Rooms !== 'undefined' && Rooms.activate) {
+      try { Rooms.activate(el.id); } catch (err) {}
+    }
+
+    const stanje = { y: window.scrollY };
+    gsap.killTweensOf(stanje);
+
+    gsap.to(stanje, {
+      y: kraj,
+      duration: prefersReducedMotion ? 0 : 1.15,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        window.scrollTo(0, stanje.y);
+        /* Kljucni red: bez njega bi se stranica pomerila, a kamera stajala. */
+        ScrollTrigger.update();
+      },
+      onComplete: () => this._slegni()
+    });
+  },
+
+  /* ------------------------------------------------------------------
+     SLEGANJE POSLE DOLASKA
+
+     Kamera prati skrol sa zadrskom od jedne sekunde (scrub: 1) - to je
+     ono sto joj daje mekocu. Ali kada putovanje stane, pregledac vise ne
+     salje dogadjaje skrolovanja, pa toj zadrsci nema ko da javi da nastavi
+     da sustize. Kamera zna da ostane par metara od cilja.
+
+     Zato jos 1,3 sekunde posle dolaska nastavljamo da javljamo polozaj
+     svaki kadar. To je tacno koliko traje sustizanje. Posle toga se
+     zaustavlja i ne trosi nista.
+
+     NAMERNO NE zovemo ScrollTrigger.refresh(): on premerava ceo raspored i
+     sam ume da izazove skok - dakle bas ono sto izbegavamo. refresh() ide
+     samo kada se raspored PROMENI, a klik na meni ga ne menja.
+     ------------------------------------------------------------------ */
+  _slegni() {
+    if (!window.gsap || !window.ScrollTrigger) return;
+    const kraj = performance.now() + 1300;
+
+    const kadar = () => {
+      ScrollTrigger.update();
+      if (performance.now() < kraj) requestAnimationFrame(kadar);
+    };
+    requestAnimationFrame(kadar);
+  }
+};
+
+/* ==========================================================================
    MENI NA TELEFONU
    --------------------------------------------------------------------------
    Fioka koja klizi s desne strane. Namerno NE zakljucava skrolovanje
@@ -1543,7 +1634,9 @@ const Meni = {
     this.zastor.addEventListener('click', () => this.zatvoriMeni());
     if (this.zatvori) this.zatvori.addEventListener('click', () => this.zatvoriMeni());
 
-    /* Klik na link zatvara fioku; skrolovanje radi Navigacija. */
+    /* Klik na link zatvara fioku; skrolovanje radi Navigacija.
+       Redosled je bitan: fioka se zatvara odmah, a Navigacija svoj posao
+       radi u istom kadru - tako se dva prelaza ne preklapaju. */
     this.fioka.querySelectorAll('a[href^="#"]').forEach((a) => {
       a.addEventListener('click', () => this.zatvoriMeni());
     });
@@ -1577,7 +1670,11 @@ const Meni = {
     });
 
     const prvi = this.fioka.querySelector('a, button');
-    if (prvi) setTimeout(() => prvi.focus(), 350);
+    /* preventScroll je obavezan: bez njega pregledac "dovlaci" fokusirani
+       element u vidno polje i time otima skrol usred vodjene navigacije. */
+    if (prvi) setTimeout(() => {
+      try { prvi.focus({ preventScroll: true }); } catch (e) { prvi.focus(); }
+    }, 350);
   },
 
   zatvoriMeni() {
@@ -1596,7 +1693,7 @@ const Meni = {
       this.fioka.hidden = true;
     }, 350);
 
-    this.dugme.focus();
+    try { this.dugme.focus({ preventScroll: true }); } catch (e) {}
   }
 };
 
