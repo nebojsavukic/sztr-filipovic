@@ -88,9 +88,9 @@ const CONFIG = {
        zauzima oko 80% širine i 82% visine celog modela (ostalo su stubovi
        i ploče u podnožju). Snimak je izvezen u 3:2, pa se uklapa bez
        primetnog odsecanja. */
-    sirina: 0.80,
-    visina: 0.82,
-    pomakY: 0.05,
+    sirina: 0.82,
+    visina: 0.94,
+    pomakY: 0.01,
     pomakZ: -0.02
   },
 
