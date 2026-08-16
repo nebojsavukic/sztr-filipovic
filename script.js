@@ -1420,102 +1420,72 @@ const Choreo = {
    ========================================================================== */
 const Dokazi = {
   /* ------------------------------------------------------------------
-     Prikazuje odeljke "Naši radovi" i "Šta kažu kupci" SAMO ako su
-     zaista popunjeni. Fotografija koja se ne učita se uklanja; ako
-     nijedna ne ostane, ceo blok se ne prikazuje. Recenzija koja još
-     nosi tekst UPISATI se ne prikazuje.
+     PRIKAZ ODELJKA "NASI RADOVI" I "STA KAZU KUPCI"
 
-     Razlog: prazan okvir ili natpis "UPISATI RECENZIJU" na živom sajtu
-     šteti više nego da odeljka uopšte nema.
+     Oba bloka su u HTML-u oznacena sa hidden i otkljucavaju se tek kad
+     imaju pravi sadrzaj: galerija kad se ucita bar jedna fotografija,
+     recenzije kad im se zameni tekst UPISATI pravim recima kupca.
+
+     GRESKA KOJU OVO ISPRAVLJA
+     Ranije su se sakrivali samo blokovi, a ne i sekcija oko njih. Ta
+     sekcija ima unutrasnji razmak py-28 i neprozirnu crnu pozadinu, pa je
+     na stranici ostajala prazna crna traka od oko 450 piksela - iznad 3D
+     sloja, tacno izmedju programa i kontakta. Izgledalo je kao da se
+     raspored raspao, a zapravo je odeljak cekao sadrzaj.
+
+     Sada se sakriva CELA sekcija dok je prazna, pa praznine nema.
      ------------------------------------------------------------------ */
   init() {
-    this._galerija();
-    this._recenzije();
+    const sekcija = document.getElementById('radovi');
+    const galerija = document.getElementById('galerija-blok');
+    const recenzije = document.getElementById('recenzije-blok');
+    if (!sekcija) return;
+
+    /* Sekcija ostaje sakrivena dok se ne dokaze da ima sta da pokaze. */
+    sekcija.hidden = true;
+
+    this._recenzije(recenzije, () => this._proveri(sekcija, galerija, recenzije));
+    this._galerija(galerija, () => this._proveri(sekcija, galerija, recenzije));
   },
 
-  _galerija() {
-    const blok = document.getElementById('galerija-blok');
-    if (!blok) return;
-    const slike = [...blok.querySelectorAll('img')];
-    let preostalo = slike.length;
+  /* Sekcija se prikazuje samo ako je bar jedan blok otkljucan. */
+  _proveri(sekcija, galerija, recenzije) {
+    const imaGalerije  = galerija  && !galerija.hidden;
+    const imaRecenzija = recenzije && !recenzije.hidden;
+    sekcija.hidden = !(imaGalerije || imaRecenzija);
+  },
 
-    const proveri = () => {
-      if (blok.querySelectorAll('figure').length > 0) blok.hidden = false;
+  _galerija(blok, gotovo) {
+    if (!blok) { gotovo(); return; }
+    const slike = Array.prototype.slice.call(blok.querySelectorAll('img'));
+    if (!slike.length) { gotovo(); return; }
+
+    let preostalo = slike.length;
+    const jedna = (uspela, img) => {
+      if (!uspela) {
+        const fig = img.closest('figure');
+        if (fig && fig.parentNode) fig.parentNode.removeChild(fig);
+      }
+      if (--preostalo > 0) return;
+      /* Blok se otkljucava tek kad je bar jedna fotografija stvarno stigla. */
+      blok.hidden = blok.querySelectorAll('figure').length === 0;
+      gotovo();
     };
 
     slike.forEach((img) => {
-      const pao = () => {
-        img.closest('figure')?.remove();
-        if (--preostalo <= 0 && blok.querySelectorAll('figure').length === 0) return;
-        proveri();
-      };
-      if (img.complete) { img.naturalWidth ? proveri() : pao(); }
-      else { img.addEventListener('load', proveri, { once: true });
-             img.addEventListener('error', pao, { once: true }); }
+      if (img.complete) { jedna(img.naturalWidth > 0, img); return; }
+      img.addEventListener('load',  () => jedna(true,  img), { once: true });
+      img.addEventListener('error', () => jedna(false, img), { once: true });
     });
   },
 
-  _recenzije() {
-    const blok = document.getElementById('recenzije-blok');
-    if (!blok) return;
+  _recenzije(blok, gotovo) {
+    if (!blok) { gotovo(); return; }
     blok.querySelectorAll('[data-prazno]').forEach((el) => {
-      if (/UPISATI/i.test(el.textContent)) el.remove();
+      if (/UPISATI/i.test(el.textContent)) el.parentNode.removeChild(el);
     });
-    if (blok.querySelectorAll('blockquote').length > 0) blok.hidden = false;
-  }
-};
-
-/* ==========================================================================
-   NAVIGACIJA — klik na meni
-   --------------------------------------------------------------------------
-   Kamera se kreće isključivo po skrolu. Običan skok preko #linka pomeri
-   stranicu trenutno, bez ijednog međukoraka, pa kamera ostane zaglavljena
-   između dve sobe i ekran je prazan dok korisnik ne mrdne točkić.
-
-   Zato klik na meni ne skače, nego VODI stranicu do cilja u malo više od
-   sekunde i pri svakom kadru javlja sistemu gde se nalazi. Kamera tako
-   dobija neprekidan pokret i doleti zajedno sa stranicom.
-
-   Cilj nije vrh sekcije nego 58% njene dužine — tu kamera po vremenskoj
-   liniji već stigne u sobu. Skok na sam vrh bi je zatekao na pola puta.
-   ========================================================================== */
-const Navigacija = {
-  init() {
-    document.querySelectorAll('a[href^="#"]').forEach((link) => {
-      link.addEventListener('click', (e) => {
-        const cilj = document.querySelector(link.getAttribute('href'));
-        if (!cilj) return;
-        e.preventDefault();
-        this.vodi(cilj);
-      });
-    });
-  },
-
-  vodi(el) {
-    /* Prvi ekran je izuzetak: tamo se ide na sam vrh stranice. */
-    const jeEkran = el.classList.contains('screen');
-    const meta = (el.id === 'hero' || !jeEkran)
-      ? Math.max(0, el.offsetTop - 80)
-      : el.offsetTop + Math.max(0, el.offsetHeight - Prozor.visina) * 0.75;
-
-    const granica = document.documentElement.scrollHeight - window.innerHeight;
-    const kraj = Math.min(meta, granica);
-
-    const stanje = { y: window.scrollY };
-    gsap.killTweensOf(stanje);
-
-    gsap.to(stanje, {
-      y: kraj,
-      duration: prefersReducedMotion ? 0 : 1.15,
-      ease: 'power2.inOut',
-      onUpdate: () => {
-        window.scrollTo(0, stanje.y);
-        /* Ovo je ključni red: bez njega bi se stranica pomerila, a kamera
-           bi i dalje stajala. Javlja sistemu novi položaj svaki kadar. */
-        ScrollTrigger.update();
-      },
-      onComplete: () => ScrollTrigger.update()
-    });
+    blok.hidden = blok.querySelectorAll('blockquote').length === 0;
+    gotovo();
   }
 };
 

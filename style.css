@@ -919,3 +919,21 @@ html, body { overflow-x: clip; }
 /* Kada 3D sloja nema, ova ogranicenja nemaju svrhu i samo bi secla sadrzaj. */
 .bez-3d .screen,
 .bez-3d .screen > .sticky { overflow: visible; }
+
+/* ==========================================================================
+   ODELJAK "RADOVI" DOK JE PRAZAN
+
+   Sekcija ima neprozirnu pozadinu i unutrasnji razmak od 7rem gore i dole.
+   Prazna, to je oko 450 piksela crne trake preko 3D sloja - upravo ona
+   praznina koja se videla izmedju programa i kontakta.
+
+   script.js joj postavlja hidden dok nema sadrzaja; ovo osigurava da hidden
+   zaista sakrije element (sekcija ima svoj display iz drugih pravila).
+   Drugi red je pojas i tregeri: ako bi JavaScript zakazao, sekcija bez
+   sadrzaja i dalje ne zauzima prostor.
+   ========================================================================== */
+#radovi[hidden] { display: none !important; }
+
+#radovi:has(#galerija-blok[hidden]):has(#recenzije-blok[hidden]) {
+  display: none;
+}
